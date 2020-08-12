@@ -48,6 +48,7 @@ uint8_t lockState ;
 uint8_t nextSignalState ;
 uint8_t nextTrackState ;
 uint8_t detectorState ;
+uint8_t newSignalState ;
 
 uint8_t readButtonStates()
 {
@@ -55,11 +56,13 @@ uint8_t readButtonStates()
 }
 
 void readInputs() {
+	static uint8_t nextSignalStatePrev;
+
 	if( !debounceT ) {
 		debounceT = 200 ; // 200ms debounce time
 
 		int val = analogRead( inputButtons ) ; 
-				if( val <  250 ) buttonState = redSignal ;
+			 if( val <  250 ) buttonState = redSignal ;
 		else if( val <  600 ) buttonState = yellowSignal ;
 		else if( val < 1000 ) buttonState = greenSignal ;
 
@@ -82,65 +85,85 @@ void readInputs() {
 		buttonState = readButtonStates() ; // yellow, red or green button control buttons
 	}
 
-	if( receivingFrequency >  greenFreq - 5 && receivingFrequency <  greenFreq + 5 ) { nextSignalState =  greenSignal; }
-	if( receivingFrequency > yellowFreq - 5 && receivingFrequency < yellowFreq + 5 ) { nextSignalState = yellowSignal; }
-	if( receivingFrequency >    redFreq - 5 && receivingFrequency <    redFreq + 5 ) { nextSignalState =    redSignal; }
+	if( recvFreq >  greenFreq - 5 && recvFreq <  greenFreq + 5 ) { nextSignalState =  greenSignal ; }
+	if( recvFreq > yellowFreq - 5 && recvFreq < yellowFreq + 5 ) { nextSignalState = yellowSignal ; }
+	if( recvFreq >    redFreq - 5 && recvFreq <    redFreq + 5 ) { nextSignalState =    redSignal ; }
+ 
+	if( nextSignalState != nextSignalStatePrev ) { // if new signal has changed, adopt it for 1 cycle
+		nextSignalStatePrev = nextSignalState ;
+	} 
+	else {
+		nextSignalState = undefined ;				// no new signal received
+		nextSignalStatePrev = undefined ;
+	}
 }
 
 
 void logic() {
 	switch( signalType ) {
-	case dutchPreSignal:
+	
+	/* DUTCH PRE SIGNAL KNOWS ONLY EXPECTING GREEN OR RED */
+	case dutchPreSignal: 
 		switch( nextSignalState ) {
 		case greenSignal:
 		case yellowSignal:
-			signalState = expectGreen;
+			newSignalState = expectGreen ;
 			break;
 		case redSignal:
-			signalState = expectRed;
+			newSignalState = expectRed ;
 			break;
 		}
 		break;
 
+	/* GERMAN PRE SIGNAL KNOWS ONLY EXPECTING GREEN, YELLOW OR RED */
 	case germanPreSignal:
-	switch( nextSignalState ) {
+		switch( nextSignalState ) {
 		case greenSignal:
-			signalState = expectGreen;
-			break;
+			newSignalState = expectGreen ;
+			break ;
 		case yellowSignal:
-			signalState = expectYellow;
-			break;
+			newSignalState = expectYellow ;
+			break ;
 		case redSignal:
-			signalState = expectRed;
-			break;
+			newSignalState = expectRed ;
+			break ;
 		}
 		break;
 
 	case mainSignal:
-		
+		if( nextSignalState == redSignal ) newSignalState = greenSignal ;
 		break;
 
 	case combiSignal:
+		switch( nextSignalState ) {
+		case greenSignal:
+		case yellowSignal:
+			newSignalState = redSignal ;
+			break ;
+		case redSignal:
+			newSignalState = yellowSignal ;
+			break;
+		}
+		break;
+	}
 	
 
-		if( detectorState == OFF ) 			trackState = occupied ;			// if our sensor is made, our track is occupied
-		else if( nextSignalState == RISING ) trackState = available ;			// if signaled from the following signal, our track is freed
-		else if( nextSignalState == FALLING ) nextTrackState == occupied ;
+	if( detectorState == OFF ) trackState = occupied ;			// if our sensor is made, our track is occupied
 
 
-		if( lockState == OFF || trackState == occupied ) { 				// pulling down lock signal overrides signal state to red,	#1 priority
-			signalState = redSignal ; return ; 							// also occupied track means red signal
-		} 
 
-		if( buttonState == redSignal || buttonState == yellowSignal ) { // if yellow or red button is pressed, 						#2 priority
-			signalState = buttonState ; 
-			override = true  ;											//  set override flag	
-			return ;
-		}
-		else if( buttonState == greenSignal ) {							// green button pressed										#3 priority
-			signalState = buttonState ; 									// set signal green
-			override = false  ;											// release override
-		}
+	if( lockState == OFF || trackState == occupied ) { 				// pulling down lock signal overrides signal state to red,	#1 priority
+		signalState = redSignal ; return ; 							// also occupied track means red signal
+	} 
+
+	if( buttonState == redSignal || buttonState == yellowSignal ) { // if yellow or red button is pressed, 						#2 priority
+		signalState = buttonState ; 
+		override = true  ;											//  set override flag	
+		return ;
+	}
+	else if( buttonState == greenSignal ) {							// green button pressed										#3 priority
+		signalState = buttonState ; 									// set signal green
+		override = false  ;											// release override
 	}
 }
 
