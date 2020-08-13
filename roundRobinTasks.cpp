@@ -99,54 +99,6 @@ void readInputs() {
 	}
 }
 
-/***************** COMPUTE LOGIC ************************/
-void fallTimeControl() {
-	if( detectorState == RISING && recvFreq == 0 ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
-		fallT = analogRead( potentiometer ) / 10;		// a time based signal must no longer last than 100 seconds tops.
-		if( fallT <= 2 ) fallT = 2 ; 					// a mininum of 2 seconds is required
-		signal.track = available;							// the section is now cleared
-	}
-
-	if( fallT == 1 ) { // in the last second of fall time  // change signal state
-		fallT == 0;
-
-		if( signal.type & combiSignal) {		// combi signal goes first to yellow before going to green
-			if( signal.state == red ) {
-				signal.state = yellow ;
-				fallT = analogRead( potentiometer ) / 10;	
-			}
-			else if ( signal.state == yellow ) {		
-				signal.state = green;
-			}
-		}
-
-		if( signal.type == mainSignal ) {	// main signal goes straight to green
-			signal.state = green;
-		}
-	}
-}
-
-
-void processButtons() {
-	switch( signal.buttons ) {
-	case green:
-		if( signal.track == occupied ) signal.state = driveOnSight;
-		else						 signal.state = green;
-		buttonOverride = false;	// UNSURE IF THIS FLAG WILL BE USED
-		break;
-
-	case yellow:
-		if( signal.track == occupied ) signal.state = driveOnSight;
-		else						 signal.state = yellow;
-		buttonOverride = true;
-		break;
-
-	case red:
-		signal.state = red;
-		buttonOverride = true;
-		break;
-	}
-}
 
 void readSignals() {
 	switch( signal.type ) {
@@ -202,24 +154,83 @@ void readSignals() {
 }
 
 
+
+
+
+/***************** COMPUTE LOGIC ************************/
+void fallTimeControl() {
+	if( detectorState == RISING && recvFreq == 0 ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
+		fallT = analogRead( potentiometer ) / 10;		// a time based signal must no longer last than 100 seconds tops.
+		if( fallT <= 2 ) fallT = 2 ; 					// a mininum of 2 seconds is required
+		signal.track = available;							// the section is now cleared
+	}
+
+	if( fallT == 1 ) { // in the last second of fall time  // change signal state
+		fallT == 0;
+
+		if( signal.type & combiSignal) {		// combi signal goes first to yellow before going to green
+			if( signal.state == red ) {
+				signal.state = yellow ;
+				fallT = analogRead( potentiometer ) / 10;	
+			}
+			else if ( signal.state == yellow ) {		
+				signal.state = green;
+			}
+		}
+
+		if( signal.type == mainSignal ) {	// main signal goes straight to green
+			signal.state = green;
+		}
+	}
+}
+
+
+void processButtons() {
+	switch( signal.buttons ) {
+	case green:
+		if( signal.track == occupied ) signal.state = driveOnSight;
+		else						 signal.state = green;
+		buttonOverride = false;	// UNSURE IF THIS FLAG WILL BE USED
+		break;
+
+	case yellow:
+		if( signal.track == occupied ) signal.state = driveOnSight;
+		else						 signal.state = yellow;
+		buttonOverride = true;
+		break;
+
+	case red:
+		signal.state = red;
+		buttonOverride = true;
+		break;
+	}
+}
+
 void computeLogic() {
 	static byte previousSignal = 253; // random number
 	// the SAS can work both with partially detected blocks as fully detected blocks
 
-	fallTimeControl();													// handles the time base signal states
+	fallTimeControl();																		// handles the time base signal states
 
-	if( detectorState == OFF ) { signal.track = occupied ; }				// while the detector sees a train, the SAS ignores signals from adjacent modules
+	if( detectorState == OFF ) { signal.track = occupied ; }								// while the detector sees a train, the SAS ignores signals from adjacent modules
 	else { readSignals(); }
 	
 
-	if( signal.track == occupied ) { signal.state = red ; }			// occupied track can be overruled by a button press
+	if( signal.track == occupied ) { signal.state = red ; }									// occupied track can be overruled by a button press
 
 	processButtons();
 
-	if( signal.locked == OFF ) { signal.state = red ; }				// lock signal overrides everything else
+	if( signal.locked == OFF ) { signal.state = red ; return; }								// lock signal overrides everything else
+
+	#define setSignal(x,y,z) greenLed.state=x;yellowLed.state=y,redLed.state=z 				// set the states of the LEDS accordingly
+	switch( signal.state ) {//	   G  Y  R 
+		case green:		setSignal( 1, 0, 0 ) ;	break ;
+		case yellow:	setSignal( 0, 1, 0 ) ;	break ;
+		case red:  		setSignal( 0, 0, 1 ) ;	break ;
+		case driveOnSight: if( !blinkT ) { blinkT = 200; yellowLed.state ^= 1; } break;		// 2 second interval toggle yellow LED
+	}
 	
 }
-
 
 
 /***************** HANDLE OUTPUTS **********************/
@@ -267,35 +278,51 @@ enum servoStates {
 	lowering,
 	up,
 	down,
-	servoInterval = 10;
+	servoInterval = 20;
 } ;
 
 void controlServo() {
 	static uint8_t servoState = up;
 
-	if( !servoT ) { servoT = servoInterval ;
+	if( !servoT ) { servoT = servoInterval ; // 20ms?
+
 		switch( servoState ) {
-			case up:
-			case lowering:
-			case bounceAfterLowering:
-			case down:
-			case raising:
-			case bounceAfterRaising:
+		case up:
+			if( signal.state == yellow 
+			||	signal.state == red ) { 
+				servoState = raising;
+			}
+			break;
+			
+			
+		case lowering:
+			if( servoPos < servoPosMin ) servoPos-- ;
+			if( servoPos ==  servoPosMin ) servoState = bounceAfterLowering ;
+			servoState = bounceAfterLowering;
+			break;
 
-			break; }
-}
+		case bounceAfterLowering:
 
-	
-#define setSignal(x,y,z) greenLed.state=x;yellowLed.state=y,redLed.state=z
-void setOutput() {
-	// first set the signals's arm and or LED's according to the current signal.state
-	switch( signal.state ) {//		   G  Y  R 
-		case green:	setSignal( 1, 0, 0 ) ;	break ;
-		case yellow:	setSignal( 0, 1, 0 ) ;	break ;
-		case red:  	setSignal( 0, 0, 1 ) ;	break ;
-		case driveOnSight: if( !blinkT ) { blinkT = 200; yellowLed.state ^= 1; } break;// 2 second interval toggle yellow LED
+			if( 1 /* done */ ) servoState = down;
+			break;
+
+		case down:
+			if( signal.state == green ) servoState = raising;
+			break;
+
+		case raising: 
+			if( servoPos < servoPosMax ) servoPos++;
+			if( servoPos ==  servoPosMax ) servoState = bounceAfterRaising ;
+			break; 
+
+		case bounceAfterRaising:
+			if( 1 /* done */ ) servoState = up;
+			break; 
+		}
+		motor.write( servoPos );
 	}
 }
+
 
 // 20Hz  -> 50ms
 // 100Hz -> 10ms
@@ -306,9 +333,9 @@ void sendSignals() {
 		sendFreqT = map( sendFreq, 20, 100, 50, 10 ) ;
 
 		switch( signal.state ) { // note pre signals are not supposed to send signals back
-			case green:	sendFreq = greenFreq;	break;
-			case yellow:	sendFreq = yellowFreq;	break;
-			case red:		sendFreq = redFreq;		break;
+			case green:			sendFreq = greenFreq;	break;
+			case yellow:		sendFreq = yellowFreq;	break;
+			case red:			sendFreq = redFreq;		break;
 			case driveOnSight:	sendFreq = yellowFreq;	break; // in the event of driving on sight, signal yellow to previous staet
 		}
 		
@@ -340,10 +367,15 @@ void initRR() {
 
 extern void processRoundRobinTasks(void) {
 
+	// physical inputs
+
 	readInputs() ;		// read input
+
+	// logic
 	computeLogic() ;	// compute logic, determen what the signal should do
 	setOutput() ;		// set the states of the leds and servo accordingly
 
+	// physical outputs
 	sendSignals() ;		// send the signal to the adjacent module
 	fadeLeds() ;		// fade leds in and out accoriding to the state
 	controlServo();		// handle the arm's servo motor including mass inertia movement
