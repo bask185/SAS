@@ -16,205 +16,309 @@ a signal can be controlled by several types of inputs:
  become yellow instead. A yellow showing combi signal will signal green  to the previous signal so that one may become green.
 
  a pre signal will addopt the state of the previous signal and will relay the red/green signal to the previous signal.
+
 */
 
-enum signalStates {
+
+
+enum signal.states {
 	undefined,
-	redSignal,
-	yellowSignal,
-	greenSignal,
+
+	red,		// main signal states
+	yellow,
+	green,
 	driveOnSight,
+
 	expectGreen, // pre signal states
 	expectYellow,
 	expectRed
 } ;
 
-enum trackStates {
+enum signal.tracks {
 	occupied,
 	available,
 } ;
+
+struct {
+	uint8_t buttons;
+	uint8_t detectorState; 
+	uint8_t sendFreq; 
+	uint8_t recvFreq; 
+	uint8_t nextState; 
+	uint8_t state; 
+	uint8_t locked; 
+	uint8_t redLed; 
+	uint8_t yellowLed; 
+	uint8_t greenLed; 
+	uint8_t state; 
+	uint8_t type;
+	uint8_t track;
+	uint8_t override;
+	uint8_t state2be;
+} signal;
+
 
 const uint8_t greenFreq = 10;
 const uint8_t yellowFreq = 30;
 const uint8_t redFreq = 50;
 
-uint8_t signalState = greenSignal ;
-uint8_t buttonState ;
-uint8_t sendFreq  ;
-uint8_t recvFreq ;
-uint8_t override ;
-uint8_t trackState ;
-uint8_t lockState ;
-uint8_t nextSignalState ;
-uint8_t nextTrackState ;
-uint8_t detectorState ;
-uint8_t newSignalState ;
 
-uint8_t readButtonStates()
-{
-	return 1 ;
-}
 
+/******************** READ AND DEBOUNCE INPUTS **********************/
 void readInputs() {
-	static uint8_t nextSignalStatePrev;
+	static uint8_t signal.nextStatePrev;
 
 	if( !debounceT ) {
 		debounceT = 200 ; // 200ms debounce time
 
 		int val = analogRead( inputButtons ) ; 
-			 if( val <  250 ) buttonState = redSignal ;
-		else if( val <  600 ) buttonState = yellowSignal ;
-		else if( val < 1000 ) buttonState = greenSignal ;
+			 if( val <  250 ) signal.buttons = red ;
+		else if( val <  600 ) signal.buttons = yellow ;
+		else if( val < 1000 ) signal.buttons = green ;
+		else				  signal.buttons = undefined ;
 
 
 		// debounce inputs
 		lockSignal.debounceInputs() ;
 		detector.debounceInputs() ;
-		//nextSignalState.debounceInputs() ;
 
-		// read in input states
-		lockState = lockSignal.readInput()  ;
-
-		if( signalType == entrySignal ) { // in the event of an entry signal, the lockpin must be inverted
-			 	 if( lockState ==  ON ) lockState == OFF; // 
-			else if( lockState == OFF ) lockState ==  ON;
+		// read in lock signal
+		signal.locked = lockSignal.readInput()  ;
+		if( signal.type == entrySignal ) { // in the event of an entry signal, the lockpin must be inverted
+			 	 if( signal.locked ==  ON ) signal.locked == OFF; // 
+			else if( signal.locked == OFF ) signal.locked ==  ON;
 		}
 		
-		detectorState = detector.readInput()  ;
-		//nextSignalState = nextSignal.readInput()  ;
-		buttonState = readButtonStates() ; // yellow, red or green button control buttons
+		// read in the detector
+		detectorState = detector.readInput() ;
+
+		// read in incomming signal from following module
+			 if( signal.recvFreq >  greenFreq - 5 && signal.recvFreq <  greenFreq + 5 ) { signal.nextState =  green ; }
+		else if( signal.recvFreq > yellowFreq - 5 && signal.recvFreq < yellowFreq + 5 ) { signal.nextState = yellow ; }
+		else if( signal.recvFreq >    redFreq - 5 && signal.recvFreq <    redFreq + 5 ) { signal.nextState =    red ; }
+	}
+}
+
+/***************** COMPUTE LOGIC ************************/
+void fallTimeControl() {
+	if( detectorState == RISING && recvFreq == 0 ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
+		fallT = analogRead( potentiometer ) / 10;		// a time based signal must no longer last than 100 seconds tops.
+		if( fallT <= 2 ) fallT = 2 ; 					// a mininum of 2 seconds is required
+		signal.track = available;							// the section is now cleared
 	}
 
-	if( recvFreq >  greenFreq - 5 && recvFreq <  greenFreq + 5 ) { nextSignalState =  greenSignal ; }
-	if( recvFreq > yellowFreq - 5 && recvFreq < yellowFreq + 5 ) { nextSignalState = yellowSignal ; }
-	if( recvFreq >    redFreq - 5 && recvFreq <    redFreq + 5 ) { nextSignalState =    redSignal ; }
- 
-	if( nextSignalState != nextSignalStatePrev ) { // if new signal has changed, adopt it for 1 cycle
-		nextSignalStatePrev = nextSignalState ;
-	} 
-	else {
-		nextSignalState = undefined ;				// no new signal received
-		nextSignalStatePrev = undefined ;
+	if( fallT == 1 ) { // in the last second of fall time  // change signal state
+		fallT == 0;
+
+		if( signal.type & combiSignal) {		// combi signal goes first to yellow before going to green
+			if( signal.state == red ) {
+				signal.state = yellow ;
+				fallT = analogRead( potentiometer ) / 10;	
+			}
+			else if ( signal.state == yellow ) {		
+				signal.state = green;
+			}
+		}
+
+		if( signal.type == mainSignal ) {	// main signal goes straight to green
+			signal.state = green;
+		}
 	}
 }
 
 
-void logic() {
-	switch( signalType ) {
+void processButtons() {
+	switch( signal.buttons ) {
+	case green:
+		if( signal.track == occupied ) signal.state = driveOnSight;
+		else						 signal.state = green;
+		buttonOverride = false;	// UNSURE IF THIS FLAG WILL BE USED
+		break;
+
+	case yellow:
+		if( signal.track == occupied ) signal.state = driveOnSight;
+		else						 signal.state = yellow;
+		buttonOverride = true;
+		break;
+
+	case red:
+		signal.state = red;
+		buttonOverride = true;
+		break;
+	}
+}
+
+void readSignals() {
+	switch( signal.type ) {
 	
 	/* DUTCH PRE SIGNAL KNOWS ONLY EXPECTING GREEN OR RED */
 	case dutchPreSignal: 
-		switch( nextSignalState ) {
-		case greenSignal:
-		case yellowSignal:
+		switch( signal.nextState ) {
+		case green:
+		case yellow:
 			newSignalState = expectGreen ;
 			break;
-		case redSignal:
+		case red:
 			newSignalState = expectRed ;
 			break;
 		}
 		break;
 
-	/* GERMAN PRE SIGNAL KNOWS ONLY EXPECTING GREEN, YELLOW OR RED */
+	/* GERMAN PRE SIGNAL KNOWS EXPECTING GREEN, YELLOW OR RED */
 	case germanPreSignal:
-		switch( nextSignalState ) {
-		case greenSignal:
+		switch( signal.nextState ) {
+		case green:
 			newSignalState = expectGreen ;
 			break ;
-		case yellowSignal:
+		case yellow:
 			newSignalState = expectYellow ;
 			break ;
-		case redSignal:
+		case red:
 			newSignalState = expectRed ;
 			break ;
 		}
 		break;
 
-	case mainSignal:
-		if( nextSignalState == redSignal ) newSignalState = greenSignal ;
+	case mainSignal:	// if a main signal receives a signal that the following state is 
+		if( signal.nextState == red ) {
+			newSignalState = green ;
+			signal.track = available;
+		}
 		break;
 
 	case combiSignal:
-		switch( nextSignalState ) {
-		case greenSignal:
-		case yellowSignal:
-			newSignalState = redSignal ;
+		switch( signal.nextState ) {
+		case green:
+		case yellow:
+			newSignalState = red ;
 			break ;
-		case redSignal:
-			newSignalState = yellowSignal ;
+		case red:
+			newSignalState = yellow ;
+			signal.track = available;
 			break;
 		}
 		break;
 	}
+}
+
+
+void computeLogic() {
+	static byte previousSignal = 253; // random number
+	// the SAS can work both with partially detected blocks as fully detected blocks
+
+	fallTimeControl();													// handles the time base signal states
+
+	if( detectorState == OFF ) { signal.track = occupied ; }				// while the detector sees a train, the SAS ignores signals from adjacent modules
+	else { readSignals(); }
 	
 
-	if( detectorState == OFF ) trackState = occupied ;			// if our sensor is made, our track is occupied
+	if( signal.track == occupied ) { signal.state = red ; }			// occupied track can be overruled by a button press
 
+	processButtons();
 
-
-	if( lockState == OFF || trackState == occupied ) { 				// pulling down lock signal overrides signal state to red,	#1 priority
-		signalState = redSignal ; return ; 							// also occupied track means red signal
-	} 
-
-	if( buttonState == redSignal || buttonState == yellowSignal ) { // if yellow or red button is pressed, 						#2 priority
-		signalState = buttonState ; 
-		override = true  ;											//  set override flag	
-		return ;
-	}
-	else if( buttonState == greenSignal ) {							// green button pressed										#3 priority
-		signalState = buttonState ; 									// set signal green
-		override = false  ;											// release override
-	}
-}
-
-void setServo(uint8_t servoPos)
-{
+	if( signal.locked == OFF ) { signal.state = red ; }				// lock signal overrides everything else
+	
 }
 
 
 
-void setOutputs() {
-	// first set the signals's arm and or LED's according to the current signalState
-	#define setSignal(x,y,z,q,w) digitalWrite(greenLed,x);digitalWrite(yellowLed,y);digitalWrite(redLed,z);analogWrite( pwmPin,q);setServo(w)
-	switch( signalState ) {       // GREEN, YELLOW, RED, BRIGHTNESS, SERVO POS
-		case greenSignal:	setSignal( HIGH,  LOW,  LOW, greenPwm,  greenServoPos ) ;	break ;
-		case yellowSignal:	setSignal(  LOW, HIGH,  LOW, yellowPwm, redServoPos   ) ;	break ;
-		case redSignal:  	setSignal(  LOW,  LOW, HIGH, redPwm,    redServoPos   ) ;	break ;
-	}
+/***************** HANDLE OUTPUTS **********************/
+#define clrColor() digitalWrite(greenLed,LOW);digitalWrite(yellowLed,LOW);digitalWrite(redLed,LOW);
+#define setColor(x,y,z)  if(x)digitalWrite(greenLed,x);if(y)digitalWrite(yellowLed,y);if(z)digitalWrite(redLed,z);
+void fadeLeds() {
+	static uint8_t ledSelector;
 
-	switch( signalType ) {		// handle the signal to the previous signal module.
-	case mainSignal: 
-		//if( detectorState == 
-		break ;
-	}
+	if( !fadeT ) { fadeT = 1; // every 1ms
+		if( pwm == 0 ) {	// if pwm is 0, the previous led has faded off and we can pick a new one
+			clrColor();	// first we clear all colors and than set the active one.
+			// the german pre signal needs more than 1 active color
+			if(  greenLed.state == 1 ) ledSelector = green; 	setColor( HIGH,  LOW,  LOW );
+			if( yellowLed.state == 1 ) ledSelector = yellow;	setColor(  LOW, HIGH,  LOW );
+			if(    redLed.state == 1 ) ledSelector = red;	  	setColor(  LOW,  LOW, HIGH );
+		}
+		else {
+			switch( ledSelector ) {
 
+			case green: 
+				if( greenLed.state == 1 && pwm < pwmMax ) pwm ++;
+				if( greenLed.state == 0 && pwm > pwmMin ) pwm --;
+				break;
 
+			case yellow:
+				if( yellowLed.state == 1 && pwm < pwmMax ) pwm ++;
+				if( yellowLed.state == 0 && pwm > pwmMin ) pwm --;
+				break;
 
-	if( signalState == redSignal ) {
-		pinMode( previousSignal, OUTPUT ) ;		// if signal is red, relay this to the previous signal
-		digitalWrite( previousSignal, LOW ) ;
-	}
-	else {
-		pinMode( previousSignal, INPUT_PULLUP ) ;// if signal is orange or green, don't signal red anymore
+			case red:
+				if( redLed.state == 1 && pwm < pwmMax ) pwm ++ ;
+				if( redLed.state == 0 && pwm > pwmMin ) pwm -- ;
+				break;
+			}
+			analogWrite( pwmPin, pwm ) ;
+		}
 	}
 }
+
+
+enum servoStates {
+	bounceAfterRaising,
+	bounceAfterLowering,
+	raising,
+	lowering,
+	up,
+	down,
+	servoInterval = 10;
+} ;
+
+void controlServo() {
+	static uint8_t servoState = up;
+
+	if( !servoT ) { servoT = servoInterval ;
+		switch( servoState ) {
+			case up:
+			case lowering:
+			case bounceAfterLowering:
+			case down:
+			case raising:
+			case bounceAfterRaising:
+
+			break; }
+}
+
+	
+#define setSignal(x,y,z) greenLed.state=x;yellowLed.state=y,redLed.state=z
+void setOutput() {
+	// first set the signals's arm and or LED's according to the current signal.state
+	switch( signal.state ) {//		   G  Y  R 
+		case green:	setSignal( 1, 0, 0 ) ;	break ;
+		case yellow:	setSignal( 0, 1, 0 ) ;	break ;
+		case red:  	setSignal( 0, 0, 1 ) ;	break ;
+		case driveOnSight: if( !blinkT ) { blinkT = 200; yellowLed.state ^= 1; } break;// 2 second interval toggle yellow LED
+	}
+}
+
 // 20Hz  -> 50ms
 // 100Hz -> 10ms
-void sendSignal() {
+void sendSignals() {
 	static uint8_t state = 0 ;
 
 	if( !sendFreqT ) {
 		sendFreqT = map( sendFreq, 20, 100, 50, 10 ) ;
 
+		switch( signal.state ) { // note pre signals are not supposed to send signals back
+			case green:	sendFreq = greenFreq;	break;
+			case yellow:	sendFreq = yellowFreq;	break;
+			case red:		sendFreq = redFreq;		break;
+			case driveOnSight:	sendFreq = yellowFreq;	break; // in the event of driving on sight, signal yellow to previous staet
+		}
+		
+		state ^= 1 ;
 		if( state ) {
-			state = 0 ;
-			pinMode( nextSignal, OUTPUT ) ;  // pull signal down
+			pinMode( nextSignal, OUTPUT ) ;			// pull signal down
 			digitalWrite( nextSignal, LOW ) ;
 		}
 		else {
-			state = 1 ;
-			digitalWrite( nextSignal, HIGH ) ;
-			pinMode( nextSignal, INPUT_PULLUP ) ; 
+			pinMode( nextSignal, INPUT_PULLUP ) ;	// pull signal up
 		}
 	}
 }
@@ -223,56 +327,24 @@ void readIncFreq() {
 	static uint8_t recvFreqPrev = 0;
 	uint8_t time = recvFreqPrev - recvFreqT ;
 
-	recvFreq = map( time, 50, 10, 20, 100 ); 
+	recvFreq = map( time, 50, 10, 20, 100 ) ; 
 
 	recvFreqPrev = recvFreqT ;
 	recvFreqT = 255 ;
 }
 
 
-
-
+void initRR() {
+	attachInterrupt(digitalPinToInterrupt( interruptPin ), readIncFreq, FALLING);
+}
 
 extern void processRoundRobinTasks(void) {
-	static unsigned char taskCounter = 255 - 1 ;
 
-// HIGH PRIORITY ROUND ROBIN TASKS
-	sendSignal() ;
+	readInputs() ;		// read input
+	computeLogic() ;	// compute logic, determen what the signal should do
+	setOutput() ;		// set the states of the leds and servo accordingly
 
-// LOW PRIORITY ROUND ROBIN TASKS
-	taskCounter ++ ;
-	switch(taskCounter) {
-	default: taskCounter = 0 ;
-
-	case 0:
-		if( !debounceT ) {
-			debounceT = 20 ;
-			/* analog reading of input buttons 
-			0V = red button		  = 0 ADC
-			1.67V = yellow button = 343 ADC
-			3.33V = green button = 682 ADC
-			5V is no button pressed = 1023 ADC
-			*/
-			int val = analogRead( inputButtons ) ; 
-				 if( val <  250 ) buttonState = redSignal ;
-			else if( val <  600 ) buttonState = yellowSignal ;
-			else if( val < 1000 ) buttonState = greenSignal ;
-			else				  buttonState = undefined ;
-		}
-		break ;
-
-	case 1:
-		if( teachInGetState() == waitButtonPress ) { // when the signal is not being configurated, handle IO
-			readInputs() ;
-			logic() ;
-			setOutputs() ;
-		}
-		break ;
-
-
-	case 255:
-		attachInterrupt(digitalPinToInterrupt( interruptPin ), readIncFreq, FALLING);
-		break;
-
-	}
+	sendSignals() ;		// send the signal to the adjacent module
+	fadeLeds() ;		// fade leds in and out accoriding to the state
+	controlServo();		// handle the arm's servo motor including mass inertia movement
 }
