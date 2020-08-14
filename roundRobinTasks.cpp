@@ -6,7 +6,7 @@
 
 /* signals to and from signals explained
 a signal can be controlled by several types of inputs:
- 1* the track feedback IO behind the signal will put the signal on red, uncondionally.
+ 1* the section feedback IO behind the signal will put the signal on red, uncondionally.
  2* if this signal is not followed by another signal, the red signal will turn green after a certain amount of time.
  3* if the signal receives a signal from a following signal, the signal may become green or yellow depening on it's type.
  4* optional buttons may override the signals upon a press.
@@ -23,18 +23,16 @@ a signal can be controlled by several types of inputs:
 
 enum signal.states {
 	undefined,
-
 	red,		// main signal states
 	yellow,
 	green,
 	driveOnSight,
-
 	expectGreen, // pre signal states
 	expectYellow,
 	expectRed
 } ;
 
-enum signal.tracks {
+enum signal.sections {
 	occupied,
 	available,
 } ;
@@ -52,7 +50,7 @@ struct {
 	uint8_t greenLed; 
 	uint8_t state; 
 	uint8_t type;
-	uint8_t track;
+	uint8_t section;
 	uint8_t override;
 	uint8_t state2be;
 } signal;
@@ -90,7 +88,7 @@ void readInputs() {
 		}
 		
 		// read in the detector
-		detectorState = detector.readInput() ;
+		signal.detectorState = detector.readInput() ;
 
 		// read in incomming signal from following module
 			 if( signal.recvFreq >  greenFreq - 5 && signal.recvFreq <  greenFreq + 5 ) { signal.nextState =  green ; }
@@ -100,57 +98,44 @@ void readInputs() {
 }
 
 
-void readSignals() {
+uint8_t readSignals() {
 	switch( signal.type ) {
 	
 	/* DUTCH PRE SIGNAL KNOWS ONLY EXPECTING GREEN OR RED */
 	case dutchPreSignal: 
 		switch( signal.nextState ) {
-		case green:
-		case yellow:
-			newSignalState = expectGreen ;
-			break;
-		case red:
-			newSignalState = expectRed ;
-			break;
-		}
-		break;
+			default:	 return undefined;
+			case green:
+			case yellow: return expectGreen ; 
+			case red:	 return expectRed ; 
 
 	/* GERMAN PRE SIGNAL KNOWS EXPECTING GREEN, YELLOW OR RED */
 	case germanPreSignal:
 		switch( signal.nextState ) {
-		case green:
-			newSignalState = expectGreen ;
-			break ;
-		case yellow:
-			newSignalState = expectYellow ;
-			break ;
-		case red:
-			newSignalState = expectRed ;
-			break ;
+			default:	 return undefined;
+			case green:  return expectGreen ;
+			case yellow: return expectYellow ;
+			case red:	 return expectRed ;
 		}
-		break;
 
 	case mainSignal:	// if a main signal receives a signal that the following state is 
-		if( signal.nextState == red ) {
-			newSignalState = green ;
-			signal.track = available;
+		switch( signal.nextState ) {
+			default:	 return undefined;
+			case green:  return undefined ;
+			case yellow: return undefined ;
+			case red:	 return green;
 		}
-		break;
 
 	case combiSignal:
 		switch( signal.nextState ) {
-		case green:
-		case yellow:
-			newSignalState = red ;
-			break ;
-		case red:
-			newSignalState = yellow ;
-			signal.track = available;
-			break;
+			default:	 return undefined;
+			case green:  return red ;
+			case yellow: return red ;
+			case red:	 return yellow ;
 		}
-		break;
 	}
+
+	return undefined ;
 }
 
 
@@ -158,11 +143,11 @@ void readSignals() {
 
 
 /***************** COMPUTE LOGIC ************************/
-void fallTimeControl() {
-	if( detectorState == RISING && recvFreq == 0 ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
+uint8_t fallTimeControl() {
+	if( detectorState == RISING ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
 		fallT = analogRead( potentiometer ) / 10;		// a time based signal must no longer last than 100 seconds tops.
 		if( fallT <= 2 ) fallT = 2 ; 					// a mininum of 2 seconds is required
-		signal.track = available;							// the section is now cleared
+		signal.section = available;						// the section is now cleared
 	}
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
@@ -170,82 +155,104 @@ void fallTimeControl() {
 
 		if( signal.type & combiSignal) {		// combi signal goes first to yellow before going to green
 			if( signal.state == red ) {
-				signal.state = yellow ;
+				return yellow ;
 				fallT = analogRead( potentiometer ) / 10;	
 			}
 			else if ( signal.state == yellow ) {		
-				signal.state = green;
+				return green;
 			}
 		}
 
 		if( signal.type == mainSignal ) {	// main signal goes straight to green
-			signal.state = green;
+			return green;
 		}
 	}
+
+	return undefined;
 }
 
 
-void processButtons() {
+uint8_t processButtons() {
 	switch( signal.buttons ) {
+	default: return undefined;
+
 	case green:
-		if( signal.track == occupied ) signal.state = driveOnSight;
-		else						 signal.state = green;
+		if( signal.section == occupied )	return driveOnSight ;
+		else								return green ;
 		buttonOverride = false;	// UNSURE IF THIS FLAG WILL BE USED
 		break;
 
 	case yellow:
-		if( signal.track == occupied ) signal.state = driveOnSight;
-		else						 signal.state = yellow;
+		if( signal.section == occupied )	return driveOnSight ;
+		else								return yellow ;
 		buttonOverride = true;
 		break;
 
 	case red:
-		signal.state = red;
+		return red;
 		buttonOverride = true;
 		break;
 	}
 }
 
 void computeLogic() {
-	static byte previousSignal = 253; // random number
+	uint8_t newState;
 	// the SAS can work both with partially detected blocks as fully detected blocks
 
-	fallTimeControl();																		// handles the time base signal states
+	if( signal.locked == ON ) {								// if signal is not locked (inverted)
 
-	if( detectorState == OFF ) { signal.track = occupied ; }								// while the detector sees a train, the SAS ignores signals from adjacent modules
-	else { readSignals(); }
-	
+		if( signal.recvFreq == 0 ) {						// not connected to adjacent signal.
+			 newState = fallTimeControl();					// handles the time based signal states
+		}
 
-	if( signal.track == occupied ) { signal.state = red ; }									// occupied track can be overruled by a button press
+		if( signal.detectorState == OFF ) { 				// while the detector sees a train, the state of the section is occupied
+			signal.section = occupied ; 
+		}												
+		else {												// if the detector does not see a train the module listen to the adjacent connected signal;
+			newState = readSignals() ;
+		}
 
-	processButtons();
+		if( signal.section == occupied ) { 					// if section is occupied -> red signal
+			newState= red ;
+		}		
+			
+		newState = processButtons() ; 						// occupied section can be overruled by a button press
+	}
 
-	if( signal.locked == OFF ) { signal.state = red ; return; }								// lock signal overrides everything else
-
-	#define setSignal(x,y,z) greenLed.state=x;yellowLed.state=y,redLed.state=z 				// set the states of the LEDS accordingly
-	switch( signal.state ) {//	   G  Y  R 
-		case green:		setSignal( 1, 0, 0 ) ;	break ;
-		case yellow:	setSignal( 0, 1, 0 ) ;	break ;
-		case red:  		setSignal( 0, 0, 1 ) ;	break ;
-		case driveOnSight: if( !blinkT ) { blinkT = 200; yellowLed.state ^= 1; } break;		// 2 second interval toggle yellow LED
+	else { // if signal is locked
+		newState = red ;
 	}
 	
+	if( newState != undefined ) signal.state = newState; 	// if a new state 
+
+	#define setLedStates(x,y,z) greenLed.state=x;yellowLed.state=y,redLed.state=z 				// set the states of the LEDS accordingly
+	switch( signal.state ) {//	  G  Y  R 
+	case green:		setLedStates( 1, 0, 0 ) ;	break ;
+	case yellow:	setLedStates( 0, 1, 0 ) ;	break ;
+	case red:  		setLedStates( 0, 0, 1 ) ;	break ;
+	case driveOnSight: 
+		if( !blinkT ) { 
+			blinkT = 200 ;
+			yellowLed.state ^= 1 ;
+		} 
+		break ;		// 2 second interval toggle yellow LED
+	}
 }
 
 
 /***************** HANDLE OUTPUTS **********************/
-#define clrColor() digitalWrite(greenLed,LOW);digitalWrite(yellowLed,LOW);digitalWrite(redLed,LOW);
-#define setColor(x,y,z)  if(x)digitalWrite(greenLed,x);if(y)digitalWrite(yellowLed,y);if(z)digitalWrite(redLed,z);
+#define clrLeds() digitalWrite(greenLed,LOW);digitalWrite(yellowLed,LOW);digitalWrite(redLed,LOW);
+#define setLeds(x,y,z)  if(x)digitalWrite(greenLed,x);if(y)digitalWrite(yellowLed,y);if(z)digitalWrite(redLed,z);
 void fadeLeds() {
 	static uint8_t ledSelector;
 
 	if( !fadeT ) { fadeT = 1; // every 1ms
 		if( pwm == 0 ) {	// if pwm is 0, the previous led has faded off and we can pick a new one
-			clrColor();	// first we clear all colors and than set the active one.
+			clrLeds();	// first we clear all colors and than set the active one.
 			// the german pre signal needs more than 1 active color
-			if(  greenLed.state == 1 ) ledSelector = green; 	setColor( HIGH,  LOW,  LOW );
-			if( yellowLed.state == 1 ) ledSelector = yellow;	setColor(  LOW, HIGH,  LOW );
-			if(    redLed.state == 1 ) ledSelector = red;	  	setColor(  LOW,  LOW, HIGH );
+			if(  greenLed.state == 1 ) ledSelector = green; 	setLeds( HIGH,  LOW,  LOW );
+			if( yellowLed.state == 1 ) ledSelector = yellow;	setLeds(  LOW, HIGH,  LOW );
+			if(    redLed.state == 1 ) ledSelector = red;	  	setLeds(  LOW,  LOW, HIGH );
 		}
 		else {
 			switch( ledSelector ) {
