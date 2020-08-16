@@ -1,11 +1,14 @@
 #include <Arduino.h>
 
+
+#define ON 9
+#define OFF 10
+
+
 #ifndef button_h
 #define	button_h
 
 //#define 
-#define ON 9
-#define OFF 10
 
 class Debounce {
 public:

@@ -1,7 +1,5 @@
 #include <Arduino.h>
 
-void processRoundRobinTasks();
-#define updateIO(); updateOutputs(); \
-updateInputs();
+extern void processRoundRobinTasks();
 
-extern uint8_t recvFreq ;
+extern void initRR();
