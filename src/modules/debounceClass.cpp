@@ -68,7 +68,6 @@ void Debounce::debounce() {
 			else			state = OFF;
 		}
 	}
-
 	oldSample = newSample;
 }
 

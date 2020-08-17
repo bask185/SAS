@@ -6,7 +6,7 @@
 //#include "teachIn.h"
 #include <Servo.h>
 
-
+#define printNewState(x) case x: Serial.println(#x); break;
 
 Debounce detector( detectorPin );
 Debounce lockSignal( lockPin );
@@ -70,8 +70,8 @@ struct {
 	uint8_t state ; 
 	uint8_t type ;
 	uint8_t section ;
-	uint8_t override ;
-	uint8_t state2be ;
+	uint8_t wasLocked ; 
+	uint8_t lastState ;
 } signal ;
 
 
@@ -215,11 +215,11 @@ uint8_t readSignals() {
 				case red:	 return expectRed ;
 			}
 
-		case mainSignal:	// if a main signal receives a signal that the following state is 
+		case mainSignal:	// if a main signal receives a signal that the following state is red, it's own state becomes green
 			switch( signal.nextState ) {
 				default:
 				case green:  
-				case yellow: return undefined ;
+				case yellow: return undefined ; // ignore green and yellow states
 				case red:	 signal.section = available; return green ;
 			}
 
@@ -227,7 +227,7 @@ uint8_t readSignals() {
 			switch( signal.nextState ) {
 				default:	 return undefined ;
 				case green:
-				case yellow: return red ;
+				case yellow: return green ;
 				case red:	 signal.section = available; return yellow ;
 			}
 		}
@@ -241,11 +241,11 @@ uint8_t readSignals() {
 
 /***************** COMPUTE LOGIC ************************/
 uint8_t fallTimeControl() {
-	if( signal.detectorState == OFF ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
+
+	if( signal.detectorState == RISING ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
 		fallT = analogRead( potentiometer ) / 10 ;		// a time based signal must no longer last than 100 seconds tops.
 		if( fallT <= 2 ) fallT = 2 ; 					// a mininum of 2 seconds is required
 		Serial.print("fall time = ");Serial.println(fallT);
-		signal.section = available ;						// the section is now cleared
 	}
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
@@ -253,19 +253,16 @@ uint8_t fallTimeControl() {
 
 		if( signal.type == combiSignal) {		// combi signal goes first to yellow before going to green
 			if( signal.state == red ) {
+				fallT = analogRead( potentiometer ) / 10 ;
 				return yellow ;
-				fallT = analogRead( potentiometer ) / 10 ;	
 			}
-			else if ( signal.state == yellow ) {		
-				return green ;
-			}
+			else if ( signal.state == yellow ) { return green ; }
 		}
 
-		if( signal.type == mainSignal ) {	// main signal goes straight to green
+		if( signal.type == mainSignal ) { 
 			return green ;
-		}
+		}	// main signal goes straight to green
 	}
-
 	return undefined ;
 }
 
@@ -322,7 +319,7 @@ uint8_t processButtons() {
 */
 
 /***********************
-descriptionm
+description
 *************************/
 void computeLogic() {
 	static uint8_t previousButtonState = 255;
@@ -331,53 +328,61 @@ void computeLogic() {
 
 	if( signal.locked == ON ) {									// if signal is not locked (inverted signal)
 
-		if( signal.detectorState == OFF ) { 					// while the detector sees a train, the state of the section is occupied
-			signal.section = occupied ; 
-		}												
-		else {													// if the detector does not see a train the module listen to the adjacent connected signal;
-			signal.section = available ;
-		} 
-
-		if( signal.section == occupied ) { 						// if section is occupied -> red signal
-			newState= red ;
+		if( signal.wasLocked ) {
+			signal.wasLocked = 0 ;
+			newState = signal.lastState ;
 		}
+
+		if( signal.detectorState == FALLING ) { 				// while the detector sees a train, the state of the section is occupied
+			signal.section = occupied ; 
+		}	
 
 		if( signal.recvFreq == 0 ) {							// if not connected to adjacent signal.
 			newState = fallTimeControl() ;						// handles the time based signal states TO BE TESTED
+			if( newState == green || newState == yellow ) {
+				signal.section = available ; 
+			}
 		}	
 		else {
 			newState = readSignals() ;							// these are the signals from the following modules, only returns a value upon change.
 		}
 
-			
-		uint8_t buttonState = processButtons() ; 				// occupied section can be overruled by a button press
-		if( buttonState != previousButtonState ) {				// only read if button state has changed
-			previousButtonState = buttonState;
-			newState = buttonState ;
+
+		if( signal.section == occupied ) { 						// if section is occupied -> red signal
+			newState= red ;
+		}
+
+		newState = processButtons() ;							
+		// uint8_t buttonState = processButtons() ; 				// occupied section can be overruled by a button press
+		// if( buttonState != previousButtonState ) {				// only read if button state has changed
+		// 	previousButtonState = buttonState;
+		// 	newState = buttonState ;
+		// }
+
+		if( newState != undefined && newState != previousState ) {
+			previousState = newState;
+			signal.state = newState ; 	// if a new state is selected, adpot it.
+			signal.lastState = newState;
+
+			Serial.print("new state = "); 
+			switch( newState ) {
+				printNewState( red ) ;
+				printNewState( green ) ;
+				printNewState( yellow ) ;
+				printNewState( undefined ) ;
+				printNewState( expectGreen ) ;
+				printNewState( expectYellow ) ;
+				printNewState( expectRed ) ;
+				printNewState( driveOnSight ) ;
+			}
 		}
 	}
 
-	else { 														// if signal is locked, the state is red
+	else {														// if signal is locked, the state is red
 		signal.state = red ;
+		signal.wasLocked = 1 ;
 	}
 	
-	#define printNewState(x) case x: Serial.println(#x); break;
-	if( newState != undefined && newState != previousState ) {
-		previousState = newState;
-		signal.state = newState ; 	// if a new state is selected, adpot it.
-
-		Serial.print("new state = "); 
-		switch( newState ) {
-			printNewState( red ) ;
-			printNewState( green ) ;
-			printNewState( yellow ) ;
-			printNewState( undefined ) ;
-			printNewState( expectGreen ) ;
-			printNewState( expectYellow ) ;
-			printNewState( expectRed ) ;
-			printNewState( driveOnSight ) ;
-		}
-	}
 
 	#define setLedStates(x,y,z) signal.greenLedState=x;signal.yellowLedState=y;signal.redLedState=z;				// set the states of the LEDS accordingly
 	switch( signal.state ) {// G  Y  R 
