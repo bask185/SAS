@@ -328,19 +328,19 @@ void computeLogic() {
 
 	if( signal.locked == ON ) {									// if signal is not locked (inverted signal)
 
-		if( signal.wasLocked ) {
+		if( signal.wasLocked ) {								// if the signal was locked, it's previous state must be assumed
 			signal.wasLocked = 0 ;
 			newState = signal.lastState ;
 		}
 
-		if( signal.detectorState == FALLING ) { 				// while the detector sees a train, the state of the section is occupied
+		if( signal.detectorState == FALLING ) { 				// if the detector sees a train, the state of the section is occupied NOTE MIGHT BE OFF INSTEAD OF FALLING
 			signal.section = occupied ; 
 		}	
 
 		if( signal.recvFreq == 0 ) {							// if not connected to adjacent signal.
 			newState = fallTimeControl() ;						// handles the time based signal states TO BE TESTED
 			if( newState == green || newState == yellow ) {
-				signal.section = available ; 
+				signal.section = available ; 					// after the time-out the section becomes available again.
 			}
 		}	
 		else {
@@ -349,7 +349,7 @@ void computeLogic() {
 
 
 		if( signal.section == occupied ) { 						// if section is occupied -> red signal
-			newState= red ;
+			newState = red ;
 		}
 
 		newState = processButtons() ;							
@@ -360,6 +360,7 @@ void computeLogic() {
 		// }
 
 		if( newState != undefined && newState != previousState ) {
+
 			previousState = newState;
 			signal.state = newState ; 	// if a new state is selected, adpot it.
 			signal.lastState = newState;
@@ -386,9 +387,12 @@ void computeLogic() {
 
 	#define setLedStates(x,y,z) signal.greenLedState=x;signal.yellowLedState=y;signal.redLedState=z;				// set the states of the LEDS accordingly
 	switch( signal.state ) {// G  Y  R 
-	case green:	 setLedStates( 1, 0, 0 ) ;	break ;
-	case yellow: setLedStates( 0, 1, 0 ) ;	break ;
-	case red:  	 setLedStates( 0, 0, 1 ) ;	break ;
+	case green:	 		setLedStates( 1, 0, 0 ) ;	break ;
+	case yellow: 		setLedStates( 0, 1, 0 ) ;	break ;
+	case red:  	 		setLedStates( 0, 0, 1 ) ;	break ;
+	case expectGreen:	setLedStates( 1, 0, 0 ) ;	break ; // FOR PRE SIGNAL
+	case expectYellow:	setLedStates( 1, 1, 0 ) ;	break ;
+	case expectRed:		setLedStates( 0, 1, 0 ) ;	break ; // diode solution for german signal is yet to be made. Perhaps a 4th io pin?
 	case driveOnSight: 
 		if( !blinkT ) { 
 			blinkT = 100 ;
