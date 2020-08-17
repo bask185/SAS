@@ -330,10 +330,6 @@ void computeLogic() {
 
 	if( signal.locked == ON ) {									// if signal is not locked (inverted signal)
 
-		if( signal.recvFreq == 0 ) {							// not connected to adjacent signal.
-			newState = fallTimeControl() ;						// handles the time based signal states TO BE TESTED
-		}	
-
 		if( signal.detectorState == OFF ) { 					// while the detector sees a train, the state of the section is occupied
 			signal.section = occupied ; 
 		}												
@@ -345,7 +341,13 @@ void computeLogic() {
 			newState= red ;
 		}
 
-		newState = readSignals() ;								// these are the signals from the following modules, only returns a value upon change.
+		if( signal.recvFreq == 0 ) {							// if not connected to adjacent signal.
+			newState = fallTimeControl() ;						// handles the time based signal states TO BE TESTED
+		}	
+		else {
+			newState = readSignals() ;							// these are the signals from the following modules, only returns a value upon change.
+		}
+
 			
 		uint8_t buttonState = processButtons() ; 				// occupied section can be overruled by a button press
 		if( buttonState != previousButtonState ) {				// only read if button state has changed
@@ -357,10 +359,7 @@ void computeLogic() {
 	else { 														// if signal is locked, the state is red
 		signal.state = red ;
 	}
-	//if( signal.section == occupied ) { Serial.println( "occupied"); }
 	
-	//if(signal.section == available) { Serial.println( "available"); }
-
 	#define printNewState(x) case x: Serial.println(#x); break;
 	if( newState != undefined && newState != previousState ) {
 		previousState = newState;
