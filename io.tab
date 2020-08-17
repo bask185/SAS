@@ -4,7 +4,7 @@ A4	yellowPin	INPUT_PULLUP
 A3	redPin	INPUT_PULLUP
 2	interruptPin	INPUT
 3	dccPin	INPUT
-4	relayPin	OUTPUT
+6	relayPin	OUTPUT
 3	lockPin	INPUT_PULLUP
 4	nextSignal	OUTPUT
 8	detectorPin	INPUT_PULLUP

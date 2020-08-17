@@ -31,6 +31,7 @@ a signal can be controlled by several types of inputs:
 
 Servo  motor;
 
+uint8_t newState ;
 uint8_t previousState = 255;
 
 enum signalTypes {
@@ -72,6 +73,7 @@ struct {
 	uint8_t section ;
 	uint8_t wasLocked ; 
 	uint8_t lastState ;
+	uint8_t override ;
 } signal ;
 
 
@@ -159,33 +161,31 @@ void readInputs() {
 		redButton.debounce() ;
 		greenButton.debounce() ;
 		yellowButton.debounce() ;
+	}
 
 		// read in buttons
-			 if(    redButton.getState() == FALLING ) 	{ signal.buttons = red ; 	Serial.println(" red pressed"); } // these states may be true for 1 cycle
-		else if(  greenButton.getState() == FALLING )	{ signal.buttons = green ;	Serial.println(" green pressed"); }
-		else if( yellowButton.getState() == FALLING ) 	{ signal.buttons = yellow ;	Serial.println(" yellow pressed"); }
-		else {
-			signal.buttons = undefined ;
-		}
+		// 	 if(    redButton.getState() == FALLING ) 	{ signal.buttons = red ; 	} // these states may be true for 1 cycle
+		// else if(  greenButton.getState() == FALLING )	{ signal.buttons = green ;	 }
+		// else if( yellowButton.getState() == FALLING ) 	{ signal.buttons = yellow ;	 }
+		// else {
+		// 	signal.buttons = undefined ;
+		// }
 
-		// read in lock signal
-		signal.locked = lockSignal.getState()  ;
+	// read in lock signal
+	signal.locked = lockSignal.getState()  ;
 
-		if( signal.type == entrySignal ) { // in the event of an entry signal, the lockpin must be inverted
-			 	 if( signal.locked ==  ON ) signal.locked == OFF ; // 
-			else if( signal.locked == OFF ) signal.locked ==  ON ;
-		}
-		
-		// read in the detector
-		signal.detectorState = detector.getState() ;
-		//if( signal.detectorState ==  LOW ) { Serial.println(" DETECTOR MADE "); }
-		//if( signal.detectorState ==  HIGH ) { Serial.println(" DETECTOR NOT MADE "); }
-
-		// read in incomming signal from following module
-			 if( signal.recvFreq >  greenFreq - 5 && signal.recvFreq <  greenFreq + 5 ) { signal.nextState =  green ; }
-		else if( signal.recvFreq > yellowFreq - 5 && signal.recvFreq < yellowFreq + 5 ) { signal.nextState = yellow ; }
-		else if( signal.recvFreq >    redFreq - 5 && signal.recvFreq <    redFreq + 5 ) { signal.nextState =    red ; }
+	if( signal.type == entrySignal ) { // in the event of an entry signal, the lockpin must be inverted
+			 if( signal.locked ==  ON ) signal.locked == OFF ; // 
+		else if( signal.locked == OFF ) signal.locked ==  ON ;
 	}
+	
+	// read in the detector
+	signal.detectorState = detector.getState() ;
+
+	// read in incomming signal from following module
+		 if( signal.recvFreq >  greenFreq - 5 && signal.recvFreq <  greenFreq + 5 ) { signal.nextState =  green ; }
+	else if( signal.recvFreq > yellowFreq - 5 && signal.recvFreq < yellowFreq + 5 ) { signal.nextState = yellow ; }
+	else if( signal.recvFreq >    redFreq - 5 && signal.recvFreq <    redFreq + 5 ) { signal.nextState =    red ; }
 }
 
 
@@ -241,6 +241,11 @@ uint8_t readSignals() {
 
 /***************** COMPUTE LOGIC ************************/
 uint8_t fallTimeControl() {
+	static uint8_t prevTime = 0;
+	if( fallT != prevTime ) {
+		prevTime = fallT ;
+		Serial.println( fallT ) ;
+	}
 
 	if( signal.detectorState == RISING ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
 		fallT = analogRead( potentiometer ) / 10 ;		// a time based signal must no longer last than 100 seconds tops.
@@ -250,13 +255,15 @@ uint8_t fallTimeControl() {
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
 		fallT == 0 ;
+		signal.section = available ;
+		Serial.println("section freed");
 
 		if( signal.type == combiSignal) {		// combi signal goes first to yellow before going to green
 			if( signal.state == red ) {
 				fallT = analogRead( potentiometer ) / 10 ;
 				return yellow ;
 			}
-			else if ( signal.state == yellow ) { return green ; }
+			else if ( signal.state == yellow || signal.state == driveOnSight ) { return green ; }
 		}
 
 		if( signal.type == mainSignal ) { 
@@ -267,26 +274,27 @@ uint8_t fallTimeControl() {
 }
 
 
+
+
+
+
 uint8_t processButtons() {
-	//signal.section = available; // DELETE ME
 
-	switch( signal.buttons ) {
-	default: return undefined ;
-
-	case green:
+	if( greenButton.getState () == FALLING ) {
 		if( signal.section == occupied )	return driveOnSight ;
 		else								return green ;
-		//signal.override = false ;	// UNSURE IF THIS FLAG WILL BE USED
+	}
 
-	case yellow:
+	if( yellowButton.getState () == FALLING ) {
 		if( signal.section == occupied )	return driveOnSight ;
 		else								return yellow ;
-		//signal.override = true ;
-
-	case red:
-		return red ;
-		//signal.override = true ;
 	}
+
+	if( redButton.getState () == FALLING ) {
+		return red ;
+	}
+
+	return undefined ;
 }
 /* General idea:
 
@@ -323,7 +331,7 @@ description
 *************************/
 void computeLogic() {
 	static uint8_t previousButtonState = 255;
-	uint8_t newState ;
+	
 	// the SAS can work both with partially detected blocks as fully detected blocks
 
 	if( signal.locked == ON ) {									// if signal is not locked (inverted signal)
@@ -331,77 +339,65 @@ void computeLogic() {
 		if( signal.wasLocked ) {								// if the signal was locked, it's previous state must be assumed
 			signal.wasLocked = 0 ;
 			newState = signal.lastState ;
+			Serial.print("assuming last state: ") ; Serial.println(signal.lastState);
 		}
 
 		if( signal.detectorState == FALLING ) { 				// if the detector sees a train, the state of the section is occupied NOTE MIGHT BE OFF INSTEAD OF FALLING
 			signal.section = occupied ; 
+			newState = red ;
+			signal.state = red ;
+			Serial.println("section freed");
 		}	
 
+		signal.recvFreq = 0 ;	// DELETE ME
 		if( signal.recvFreq == 0 ) {							// if not connected to adjacent signal.
+
 			newState = fallTimeControl() ;						// handles the time based signal states TO BE TESTED
-			if( newState == green || newState == yellow ) {
+			if(newState) {Serial.print("fall time returned: ");Serial.println(newState);}
+
+			/*if( newState == green || newState == yellow ) {
 				signal.section = available ; 					// after the time-out the section becomes available again.
-			}
+			}*/
 		}	
 		else {
 			newState = readSignals() ;							// these are the signals from the following modules, only returns a value upon change.
+			if(newState){ Serial.print("reading signals returned: ");Serial.println(newState);}
 		}
 
 
-		if( signal.section == occupied ) { 						// if section is occupied -> red signal
-			newState = red ;
+
+		//newState = processButtons() ;							
+		//newState = processButtons() ; 				// occupied section can be overruled by a button press
+		byte buttonState = processButtons();
+		if( buttonState != previousButtonState ) {				// only read if button state has changed
+			previousButtonState = buttonState;
+			newState = buttonState ;
 		}
-
-		newState = processButtons() ;							
-		// uint8_t buttonState = processButtons() ; 				// occupied section can be overruled by a button press
-		// if( buttonState != previousButtonState ) {				// only read if button state has changed
-		// 	previousButtonState = buttonState;
-		// 	newState = buttonState ;
-		// }
-
-		if( newState != undefined && newState != previousState ) {
-
-			previousState = newState;
-			signal.state = newState ; 	// if a new state is selected, adpot it.
-			signal.lastState = newState;
-
-			Serial.print("new state = "); 
-			switch( newState ) {
-				printNewState( red ) ;
-				printNewState( green ) ;
-				printNewState( yellow ) ;
-				printNewState( undefined ) ;
-				printNewState( expectGreen ) ;
-				printNewState( expectYellow ) ;
-				printNewState( expectRed ) ;
-				printNewState( driveOnSight ) ;
-			}
-		}
-	}
-
+	}	
 	else {														// if signal is locked, the state is red
 		signal.state = red ;
 		signal.wasLocked = 1 ;
 	}
-	
 
-	#define setLedStates(x,y,z) signal.greenLedState=x;signal.yellowLedState=y;signal.redLedState=z;				// set the states of the LEDS accordingly
-	switch( signal.state ) {// G  Y  R 
-	case green:	 		setLedStates( 1, 0, 0 ) ;	break ;
-	case yellow: 		setLedStates( 0, 1, 0 ) ;	break ;
-	case red:  	 		setLedStates( 0, 0, 1 ) ;	break ;
-	case expectGreen:	setLedStates( 1, 0, 0 ) ;	break ; // FOR PRE SIGNAL
-	case expectYellow:	setLedStates( 1, 1, 0 ) ;	break ;
-	case expectRed:		setLedStates( 0, 1, 0 ) ;	break ; // diode solution for german signal is yet to be made. Perhaps a 4th io pin?
-	case driveOnSight: 
-		if( !blinkT ) { 
-			blinkT = 100 ;
-			signal.redLedState = 0;
-			signal.greenLedState = 0;
-			signal.yellowLedState ^= 1 ;
-			Serial.println("toggling led");
-		} 
-		break ;		// 2 second interval toggle yellow LED
+	if( newState != undefined ) {
+
+		previousState = newState;
+		signal.state = newState ; 	// if a new state is selected, adpot it.
+		signal.lastState = newState;
+
+		newState = undefined ;
+
+		Serial.print("new state = "); 
+		switch( newState ) {
+			printNewState( red ) ;
+			printNewState( green ) ;
+			printNewState( yellow ) ;
+			printNewState( undefined ) ;
+			printNewState( expectGreen ) ;
+			printNewState( expectYellow ) ;
+			printNewState( expectRed ) ;
+			printNewState( driveOnSight ) ;
+		}
 	}
 }
 
@@ -415,6 +411,24 @@ const int pwmMax = 255;
 uint8_t pwm = 0;
 void fadeLeds() {
 	static uint8_t ledSelector ;
+
+	#define setLedStates(x,y,z) signal.greenLedState=x;signal.yellowLedState=y;signal.redLedState=z;				// set the states of the LEDS accordingly
+	switch( signal.state ) {// G  Y  R 
+	case green:	 		setLedStates( 1, 0, 0 ) ;	break ;
+	case yellow: 		setLedStates( 0, 1, 0 ) ;	break ;
+	case red:  	 		setLedStates( 0, 0, 1 ) ;	break ;
+	case expectGreen:	setLedStates( 1, 0, 0 ) ;	break ; // FOR PRE SIGNAL
+	case expectYellow:	setLedStates( 1, 1, 0 ) ;	break ;
+	case expectRed:		setLedStates( 0, 1, 0 ) ;	break ; // diode solution for german signal is yet to be made. Perhaps a 4th io pin?
+	case driveOnSight: 
+		if( !blinkT ) { 
+			blinkT = 150 ;
+			signal.redLedState = 0;
+			signal.greenLedState = 0;
+			signal.yellowLedState ^= 1 ;
+		} 
+		break ;		// 2 second interval toggle yellow LED
+	}
 
 	if( !fadeT ) { fadeT = 1 ; // every 1ms
 		if( pwm == pwmMax ) {	// if pwm is 0, the previous led has faded off and we can pick a new one
@@ -436,16 +450,22 @@ void fadeLeds() {
 
 			case green: 
 				if( signal.greenLedState == 0 && pwm < pwmMax ) pwm ++ ;
+				if( signal.greenLedState == 0 && pwm < pwmMax ) pwm ++ ;
+				if( signal.greenLedState == 1 && pwm > pwmMin ) pwm -- ;
 				if( signal.greenLedState == 1 && pwm > pwmMin ) pwm -- ;
 				break;
 
 			case yellow:
 				if( signal.yellowLedState == 0 && pwm < pwmMax ) pwm ++ ;
+				if( signal.yellowLedState == 0 && pwm < pwmMax ) pwm ++ ;
+				if( signal.yellowLedState == 1 && pwm > pwmMin ) pwm -- ;
 				if( signal.yellowLedState == 1 && pwm > pwmMin ) pwm -- ;
 				break;
 
 			case red:
 				if( signal.redLedState == 0 && pwm < pwmMax ) pwm ++ ;
+				if( signal.redLedState == 0 && pwm < pwmMax ) pwm ++ ;
+				if( signal.redLedState == 1 && pwm > pwmMin ) pwm -- ;
 				if( signal.redLedState == 1 && pwm > pwmMin ) pwm -- ;
 				break ;
 			}
@@ -541,6 +561,13 @@ void sendSignals() {
 	if( !sendFreqT ) {
 		sendFreqT = map( signal.sendFreq, 20, 100, 50, 10 ) ;
 
+		static uint8_t prevFreq ;
+		if( signal.sendFreq != prevFreq ) {
+			Serial.print("new freq = ");Serial.println(signal.sendFreq);
+			prevFreq = signal.sendFreq;
+		}
+		
+
 		//if( ++counter == 10 ) {
 			//counter = 0;
 			//Serial.print("send Frequency is: ");
@@ -556,7 +583,7 @@ void sendSignals() {
 		
 		state ^= 1 ;
 		if( state ) {
-			//pinMode( nextSignal, OUTPUT ) ;			// pull signal down
+			pinMode( nextSignal, OUTPUT ) ;			// pull signal down
 			digitalWrite( nextSignal, LOW ) ;
 		}
 		else {
@@ -571,6 +598,8 @@ void readIncFreq() {
 	uint8_t currentTime = 255 - recvFreqT ; // recvFreqT is always decrementing
 
 	signal.recvFreq = map( currentTime, 50, 10, 20, 100 ) ; 
+
+	signal.recvFreq = 0; // delete me
 
 	recvFreqPrev = recvFreqT ;
 	recvFreqT = 255 ;
@@ -587,7 +616,8 @@ void initRR() {
 	signal.section = available ;
 	signal.type = combiSignal ;
 	signal.state = green ;
-
+	signal.wasLocked = 0 ;
+ 
 	
 	Serial.println("INITIALIZING FINISHED");
 }
@@ -608,5 +638,5 @@ extern void processRoundRobinTasks(void) {
 	servoControl() ;	// handle the arm's servo motor including mass inertia movement
 
 	// debug stuff
-	printStuff();
+	if( Serial.read () == 'd') printStuff();
 }
