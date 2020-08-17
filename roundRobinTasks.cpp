@@ -83,7 +83,8 @@ const uint8_t redFreq = 30 ;
 void printStuff(){
 	if( !printT ) { printT = 200;
 
-		Serial.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n") ;
+		Serial.write( 12 );
+		//Serial.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n") ;
 		Serial.print("signal type     : ");
 		switch(signal.type) {
 			printType(mainSignal);
@@ -192,7 +193,7 @@ uint8_t readSignals() {
 	static uint8_t previousSignalState;
 
 	if( previousSignalState != signal.nextState ) {
-		previousSignalState = signal.nextState 
+		previousSignalState = signal.nextState ;
 
 		switch( signal.type ) {
 		
@@ -219,7 +220,7 @@ uint8_t readSignals() {
 				default:
 				case green:  
 				case yellow: return undefined ;
-				case red:	 track.section = available; return green ;
+				case red:	 signal.section = available; return green ;
 			}
 
 		case combiSignal:
@@ -227,7 +228,7 @@ uint8_t readSignals() {
 				default:	 return undefined ;
 				case green:
 				case yellow: return red ;
-				case red:	 track.section = available; return yellow ;
+				case red:	 signal.section = available; return yellow ;
 			}
 		}
 	}
