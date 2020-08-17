@@ -13,12 +13,18 @@
 class Debounce {
 public:
 	Debounce(unsigned char _pin);
-	unsigned char readInput();
-	void debounceInputs();
+	// bool fell() ;
+	// bool rose() ;
+	// bool isHigh() ;
+	// bool isLow() ;
+	unsigned char getState() ;
+	void debounce() ;
 
 private:
-	unsigned char state;
-	unsigned char pin; 
+	unsigned char state ;
+	unsigned char pin ; 
+	bool oldSample = false ; 
+	bool statePrev = false ;
 };
 	
 #endif

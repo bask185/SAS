@@ -1,20 +1,58 @@
 #include "debounceClass.h"
 
+#define OLD
+
 Debounce::Debounce(unsigned char _pin) {
 	pinMode(_pin, INPUT_PULLUP); // take note I use a pull-up resistor by default
-	pin = _pin; }
+	pin = _pin;
+}
 
-unsigned char Debounce::readInput() {
+
+
+// bool Debounce::fell(){
+// 	if( fallen == true ) {
+// 		fallen = false;
+
+// 		return true;
+// 	}
+// 	else {
+// 		return false;
+// 	}
+// }
+
+// bool Debounce::rose(){
+// 	if( rissen == true) {
+// 		rissen = false;
+
+// 		return true;
+// 	}
+// 	else {
+// 		return false;
+// 	}
+// }
+
+// bool Debounce::isHigh(){
+// 	if( state == ON ) return true;
+// 	else			  return false;
+// }
+
+// bool Debounce::isLow(){
+// 	if( state == OFF ) return true;
+// 	else			   return false;
+// }
+
+
+unsigned char Debounce::getState() {
 	byte retValue = state;
 
 	if(state == RISING)  state = ON; // take note I use a pull-up resistor
 	if(state == FALLING) state = OFF;  // rising or falling may be returned only once
 
-	return retValue; }
+	return retValue;
+}
 
-void Debounce::debounceInputs() {
-	static bool oldSample = false, statePrev = false;
-	bool newSample = digitalRead(pin);
+void Debounce::debounce() {
+	bool newSample = digitalRead( pin );
 
 	if(newSample == oldSample) {	// if the same state is detected atleast twice in 20ms...
 	
@@ -32,7 +70,6 @@ void Debounce::debounceInputs() {
 	}
 
 	oldSample = newSample;
-	return 255;
 }
 
 
