@@ -116,21 +116,25 @@ void printStuff(){
 			printType(ON);
 			printType(OFF);
 		}
+
 		Serial.print("red Led State   : ");
 		switch(signal.redLedState) {
 			printType(1);
 			printType(0);
 		}
+
 		Serial.print("yellow led State: ");
 		switch(signal.yellowLedState) {
 			printType(1);
 			printType(0);
 		}
+
 		Serial.print("green Led State : ");
 		switch(signal.greenLedState) {
 			printType(1);
 			printType(0);
 		}
+
 		Serial.print("section         : ");
 		switch(signal.section) {
 			printType(available);
@@ -185,44 +189,48 @@ void readInputs() {
 
 
 uint8_t readSignals() {
+	static uint8_t previousSignalState;
 
-	switch( signal.type ) {
-	
-	/* DUTCH PRE SIGNAL KNOWS ONLY EXPECTING GREEN OR RED */
-	case dutchPreSignal: 
-		switch( signal.nextState ) {
-			default:	 return undefined ;
-			case green:	  
-			case yellow: return expectGreen ; 
-			case red:	 return expectRed ; 
-		}
+	if( previousSignalState != signal.nextState ) {
+		previousSignalState = signal.nextState 
 
-	/* GERMAN PRE SIGNAL KNOWS EXPECTING GREEN, YELLOW OR RED */
-	case germanPreSignal:
-		switch( signal.nextState ) {
-			default:	 return undefined ;
-			case green:  return expectGreen ;
-			case yellow: return expectYellow ;
-			case red:	 return expectRed ;
-		}
+		switch( signal.type ) {
+		
+		/* DUTCH PRE SIGNAL KNOWS ONLY EXPECTING GREEN OR RED */
+		case dutchPreSignal: 
+			switch( signal.nextState ) {
+				default:	 return undefined ;
+				case green:	  
+				case yellow: return expectGreen ; 
+				case red:	 return expectRed ; 
+			}
 
-	case mainSignal:	// if a main signal receives a signal that the following state is 
-		switch( signal.nextState ) {
-			default:
-			case green:  
-			case yellow: return undefined ;
-			case red:	 return green ;
-		}
+		/* GERMAN PRE SIGNAL KNOWS EXPECTING GREEN, YELLOW OR RED */
+		case germanPreSignal:
+			switch( signal.nextState ) {
+				default:	 return undefined ;
+				case green:  return expectGreen ;
+				case yellow: return expectYellow ;
+				case red:	 return expectRed ;
+			}
 
-	case combiSignal:
-		switch( signal.nextState ) {
-			default:	 return undefined ;
-			case green:
-			case yellow: return red ;
-			case red:	 return yellow ;
+		case mainSignal:	// if a main signal receives a signal that the following state is 
+			switch( signal.nextState ) {
+				default:
+				case green:  
+				case yellow: return undefined ;
+				case red:	 track.section = available; return green ;
+			}
+
+		case combiSignal:
+			switch( signal.nextState ) {
+				default:	 return undefined ;
+				case green:
+				case yellow: return red ;
+				case red:	 track.section = available; return yellow ;
+			}
 		}
 	}
-
 	return undefined ;
 }
 
@@ -316,32 +324,37 @@ uint8_t processButtons() {
 descriptionm
 *************************/
 void computeLogic() {
+	static uint8_t previousButtonState = 255;
 	uint8_t newState ;
 	// the SAS can work both with partially detected blocks as fully detected blocks
 
-	if( signal.locked == ON ) {								// if signal is not locked (inverted signal)
+	if( signal.locked == ON ) {									// if signal is not locked (inverted signal)
 
-		if( signal.recvFreq == 0 ) {						// not connected to adjacent signal.
-			//newState = fallTimeControl() ;				// handles the time based signal states TO BE TESTED
-		}
+		if( signal.recvFreq == 0 ) {							// not connected to adjacent signal.
+			newState = fallTimeControl() ;						// handles the time based signal states TO BE TESTED
+		}	
 
-		if( signal.detectorState == OFF ) { 				// while the detector sees a train, the state of the section is occupied
+		if( signal.detectorState == OFF ) { 					// while the detector sees a train, the state of the section is occupied
 			signal.section = occupied ; 
 		}												
-		else {												// if the detector does not see a train the module listen to the adjacent connected signal;
+		else {													// if the detector does not see a train the module listen to the adjacent connected signal;
 			signal.section = available ;
 		} 
-		newState = readSignals() ;
 
-		if( signal.section == occupied ) { 					// if section is occupied -> red signal
-			newState= red ; // this runs, so so far so good.
-		}		
+		if( signal.section == occupied ) { 						// if section is occupied -> red signal
+			newState= red ;
+		}
+
+		newState = readSignals() ;								// these are the signals from the following modules, only returns a value upon change.
 			
-		uint8_t buttonState = processButtons() ; 						// occupied section can be overruled by a button press
-		if( buttonState != undefined ) newState = buttonState ;
+		uint8_t buttonState = processButtons() ; 				// occupied section can be overruled by a button press
+		if( buttonState != previousButtonState ) {				// only read if button state has changed
+			previousButtonState = buttonState;
+			newState = buttonState ;
+		}
 	}
 
-	else { // if signal is locked..
+	else { 														// if signal is locked, the state is red
 		signal.state = red ;
 	}
 	//if( signal.section == occupied ) { Serial.println( "occupied"); }
@@ -562,36 +575,13 @@ void initRR() {
 	attachInterrupt(digitalPinToInterrupt( interruptPin ), readIncFreq, FALLING) ;
 
 	signal.locked = 0 ;
-	signal.greenLedState = 1 ;
-	signal.yellowLedState = 0 ;
-	signal.redLedState = 0 ;
-
 	signal.section = available ;
-
 	signal.type = combiSignal ;
-	signal.type = green ;
+	signal.state = green ;
 
 	
 	Serial.println("INITIALIZING FINISHED");
 }
-/*
-struct {
-	uint8_t buttons ;
-	uint8_t detectorState ; 
-	uint8_t sendFreq ; 
-	uint8_t recvFreq ; 
-	uint8_t nextState ; 
-	uint8_t locked ; 
-	uint8_t redLedState ; 
-	uint8_t yellowLedState ; 
-	uint8_t greenLedState ; 
-	uint8_t state ; 
-	uint8_t type ;
-	uint8_t section ;
-	uint8_t override ;
-	uint8_t state2be ;
-} signal ;
-*/
 
 
 
