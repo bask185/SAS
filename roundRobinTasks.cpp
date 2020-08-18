@@ -31,7 +31,6 @@ a signal can be controlled by several types of inputs:
 
 Servo  motor;
 
-uint8_t newState ;
 uint8_t	mode;
 uint8_t previousState = 255;
 
@@ -62,7 +61,7 @@ enum sections {
 struct {
 	uint8_t buttons ;
 	uint8_t detectorState ; 
-	uint8_t sendFreq ; 
+	uint8_t sendFreq ; // N.B. frequenty is actually the cycle Time. The calculation to an actual frequenty is unneeded.
 	uint8_t recvFreq ; 
 	uint8_t nextState ; 
 	uint8_t locked ; 
@@ -75,6 +74,7 @@ struct {
 	uint8_t wasLocked ; 
 	uint8_t lastState ;
 	uint8_t override ;
+	uint8_t connected ;
 } signal ;
 
 
@@ -164,13 +164,6 @@ void readInputs() {
 		yellowButton.debounce() ;
 	}
 
-		// read in buttons
-		// 	 if(    redButton.getState() == FALLING ) 	{ signal.buttons = red ; 	} // these states may be true for 1 cycle
-		// else if(  greenButton.getState() == FALLING )	{ signal.buttons = green ;	 }
-		// else if( yellowButton.getState() == FALLING ) 	{ signal.buttons = yellow ;	 }
-		// else {
-		// 	signal.buttons = undefined ;
-		// }
 
 	// read in lock signal
 	signal.locked = lockSignal.getState()  ;
@@ -184,9 +177,11 @@ void readInputs() {
 	signal.detectorState = detector.getState() ;
 
 	// read in incomming signal from following module
-		 if( signal.recvFreq >  greenFreq - 5 && signal.recvFreq <  greenFreq + 5 ) { signal.nextState =  green ; }
-	else if( signal.recvFreq > yellowFreq - 5 && signal.recvFreq < yellowFreq + 5 ) { signal.nextState = yellow ; }
-	else if( signal.recvFreq >    redFreq - 5 && signal.recvFreq <    redFreq + 5 ) { signal.nextState =    red ; }
+	signal.connected = 1; // set true
+	if (	 signal.recvFreq >  greenFreq - 3 && signal.recvFreq <  greenFreq + 3 ) { signal.nextState =     green ; }
+	else if( signal.recvFreq > yellowFreq - 3 && signal.recvFreq < yellowFreq + 3 ) { signal.nextState =    yellow ; }
+	else if( signal.recvFreq >    redFreq - 3 && signal.recvFreq <    redFreq + 3 ) { signal.nextState =       red ; }
+	else { signal.connected = 0;													  signal.nextState = undefined ; } // no known frequency means not connected
 }
 
 
@@ -281,13 +276,15 @@ uint8_t fallTimeControl() {
 uint8_t processButtons() {
 
 	if( greenButton.getState () == FALLING ) {
-		if( signal.section == occupied )	return driveOnSight ;
-		else								return green ;
+		if( signal.section == occupied 
+		&&  signal.type != mainSignal ) return driveOnSight ; 
+		else							return green ; 
 	}
 
 	if( yellowButton.getState () == FALLING ) {
-		if( signal.section == occupied )	return driveOnSight ;
-		else								return yellow ;
+		if( signal.section == occupied 
+		&&  signal.type != mainSignal ) return driveOnSight ;
+		else							return yellow ;
 	}
 
 	if( redButton.getState () == FALLING ) {
@@ -329,65 +326,63 @@ uint8_t processButtons() {
 /***********************
 description
 *************************/
+
+// BRAINFART: perhaps an idea to remove the signal state and replace it by led states ??
 void computeLogic() {
 	static uint8_t previousButtonState = 255;
+
+	uint8_t newSignalState   = undefined ; 
+	uint8_t newDetectorState = undefined ; 
+	uint8_t newFallTimeState = undefined ;
+	uint8_t newButtonState   = undefined ;
+	uint8_t newState		 = undefined ;
 	
 	// the SAS can work both with partially detected blocks as fully detected blocks
-
 	if( signal.locked == ON ) {									// if signal is not locked (inverted signal)
 
 		if( signal.wasLocked ) {								// if the signal was locked, it's previous state must be assumed
 			signal.wasLocked = 0 ;
-			newState = signal.lastState ;
-			Serial.print("signal unlocked assuming last state: ") ; Serial.println(signal.lastState);
+			newState = signal.lastState ;						// need a new variable for this
 		}
 
-		if( signal.detectorState == FALLING ) { 				// if the detector sees a train, the state of the section is occupied NOTE MIGHT BE OFF INSTEAD OF FALLING
+		if( signal.detectorState == FALLING ) { 				// if the detector sees a train (only 1 flank), the state of the section is occupied NOTE MIGHT BE OFF INSTEAD OF FALLING
 			signal.section = occupied ; 
-			newState = red ;
-			//signal.state = red ;
-			Serial.println("section occupied");
-		}	
+			newDetectorState = red ;
+		} 
 
-		if( signal.recvFreq == 0 ) {							// if not connected to adjacent signal.
-
-			newState = fallTimeControl() ;						// handles the time based signal states TO BE TESTED
-			if(newState) {Serial.print("fall time returned: ");Serial.println(newState);}
-
+		if( signal.connected == 0 ) {							// if not connected to adjacent signal.
+			newFallTimeState = fallTimeControl() ;				// handles the time based signal states TO BE TESTED
 		}	
 		else {
-			newState = readSignals() ;							// these are the signals from the following modules, only returns a value upon change.
-			if(newState){ Serial.print("reading signals returned: ");Serial.println(newState);}
+			newSignalState = readSignals() ;							// these are the signals from the following modules, only returns a value upon change.
 		}
 
-		//newState = processButtons() ;							
-		//newState = processButtons() ; 				// occupied section can be overruled by a button press
-		byte buttonState = processButtons();
-		if( buttonState != previousButtonState ) {				// only read if button state has changed
-			previousButtonState = buttonState;
-			newState = buttonState ;
-		}
 
-		if( newState == green || newState == yellow ) {
-			signal.section = available ; 					// after the time-out the section becomes available again.
-			Serial.println("section freed");
-		}
+		newButtonState = processButtons();
 	}	
 
-	else {														// if signal is locked, the state is red
+	else {														// if signal is locked, the state is unconditional red
 		signal.state = red ;
 		signal.wasLocked = 1 ;
+		return ;
 	}
+
+	//newState |= newSignalState | newDetectorState | newFallTimeState | newButtonState ; was a brainfart but is not safe when more than one newstate is set. It is unlikely, but t
+	if(		 newSignalState   != undefined ) newState = newSignalState  ;
+	else if( newDetectorState != undefined ) newState = newDetectorState ;
+	else if( newFallTimeState != undefined ) newState = newFallTimeState ;
+	else if( newButtonState   != undefined ) newState = newButtonState ;
 
 	if( newState != undefined ) {
 
-		previousState = newState;
-		signal.state = newState ; 	// if a new state is selected, adpot it.
-		signal.lastState = newState;
+		signal.lastState = signal.state = newState ; 	// if a new state is selected, adopt it and store it.
 
-		newState = undefined ;
+		if( newState == green || newState == yellow ) {		// if new state equals green or yellow, the section is no longer occupied
+			signal.section = available ; 					// after the time-out the section becomes available again.
+			Serial.println("section freed");
+		}
 
-		Serial.print("new state = "); 
+		Serial.print("new state = ");  // print new state for debugging purposes BASLABEL DELETE ME WHEN DONE
 		switch( newState ) {
 			printNewState( red ) ;
 			printNewState( green ) ;
@@ -560,22 +555,13 @@ void sendSignals() {
 	static uint8_t state = 0, counter = 0;
 
 	if( !sendFreqT ) {
-		sendFreqT = map( /*signal.sendFreq*/ mode , 20, 100, 50, 10 ) ;	// TEMPORARILY OVERRULED BY SERIAL INPUT
+		sendFreqT =  signal.sendFreq ; // green = 10, yellow = 20, red  = 30
 
-		static uint8_t prevFreq ;
-		if( signal.sendFreq != prevFreq ) {
-			Serial.print("new freq = ");Serial.println(signal.sendFreq);
-			prevFreq = signal.sendFreq;
-		}
 		
-
-		//if( ++counter == 10 ) {
-			//counter = 0;
-			//Serial.print("send Frequency is: ");
-			//Serial.println( sendFreqT );
-		//}
-
-		switch( signal.state ) { // note pre signals are not supposed to send signals back
+		switch( signal.state ) { // note pre signals are not supposed to send signals back?
+			// case expectGreen:signal.sendFreq =  greenFreq ;	break ;
+			// case expectYellow:signal.sendFreq = greenFreq ;	break ;
+			// case expectRed: signal.sendFreq =   greenFreq ;	break ;
 			case green:			signal.sendFreq = greenFreq ;	break ;
 			case yellow:		signal.sendFreq = yellowFreq ;	break ;
 			case red:			signal.sendFreq = redFreq ;		break ;
@@ -584,30 +570,23 @@ void sendSignals() {
 		
 		state ^= 1 ;
 		if( state ) {
-			pinMode( interruptPin, OUTPUT );
-			digitalWrite ( interruptPin, HIGH );
-
 			pinMode( nextSignal, OUTPUT ) ;			// pull signal down
 			digitalWrite( nextSignal, LOW ) ;
 		}
 		else {
-			digitalWrite ( interruptPin, LOW );
-			digitalWrite( nextSignal, HIGH ) ; // delete me
-			//pinMode( nextSignal, INPUT_PULLUP ) ;	// pull signal up
+			pinMode( nextSignal, INPUT_PULLUP ) ;	// pull signal up
 		}
 	}
 }
 
-void readIncFreq() {
-	static uint8_t recvFreqPrev = 0 ;
-	uint8_t currentTime = 255 - recvFreqT ; // recvFreqT is always decrementing
 
-	signal.recvFreq = map( currentTime, 50, 10, 20, 100 ) ; 
+void readIncFreq() { // ISR
 
-	signal.recvFreq = 0; // delete me
+	int8_t currentTime = ( 128 - recvFreqT ) ; // recvFreqT is always decrementing.
 
-	recvFreqPrev = recvFreqT ;
-	recvFreqT = 255 ;
+	signal.recvFreq =  constrain( currentTime, 0 , 100 ) / 2 ; // only responds to falling flank
+	
+	recvFreqT = 128;
 }
 
 
@@ -619,7 +598,7 @@ void initRR() {
 
 	signal.locked = 0 ;
 	signal.section = available ;
-	signal.type = combiSignal ;
+	signal.type = germanPreSignal ;
 	signal.state = green ;
 	signal.wasLocked = 0 ;
  
@@ -647,10 +626,10 @@ extern void processRoundRobinTasks(void) {
 	if( Serial.available () ) {
 		byte b = Serial.read() ;
 
-		if ( b == 'g' ) mode = 10 ;
-		if ( b == 'y' ) mode = 20 ;
-		if ( b == 'r' ) mode = 30 ;
-		if ( b == 'o' ) mode = 0 ;
+		// if ( b == 'g' ) signal.sendFreq = 10 ; used to test the signal transmitting
+		// if ( b == 'y' ) signal.sendFreq = 20 ;
+		// if ( b == 'r' ) signal.sendFreq = 30 ;
+		// if ( b == 'o' ) signal.sendFreq = 0 ;
 		if ( b == 'd' ) printStuff() ;
 	}
 }
