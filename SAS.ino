@@ -6,14 +6,15 @@
 void setup() {
 	
 	initIO();
-
+	cli();
 	initTimers();
+	sei();
 
 	initRR();
 
 	
 	Serial.begin(115200);
-	Serial.println("BOOTING SAS MODULE");
+	Serial.println("MODULE BOOTED");
 
 }
 

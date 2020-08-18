@@ -2,7 +2,7 @@ A6	potentiometer	INPUT
 A5	greenPin	INPUT_PULLUP
 A4	yellowPin	INPUT_PULLUP
 A3	redPin	INPUT_PULLUP
-2	interruptPin	INPUT
+2	interruptPin	INPUT_PULLUP
 3	dccPin	INPUT
 6	relayPin	OUTPUT
 3	lockPin	INPUT_PULLUP

@@ -250,7 +250,7 @@ uint8_t fallTimeControl() {
 	}
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
-		fallT == 0 ;
+		fallT = 0 ;
 		//signal.section = available ; DONE IN COMPUTE LOGIC
 
 		if( signal.type == combiSignal) {		// combi signal goes first to yellow before going to green
@@ -379,7 +379,7 @@ void computeLogic() {
 
 		if( newState == green || newState == yellow ) {		// if new state equals green or yellow, the section is no longer occupied
 			signal.section = available ; 					// after the time-out the section becomes available again.
-			Serial.println("section freed");
+			Serial.println("section freed") ;
 		}
 
 		Serial.print("new state = ");  // print new state for debugging purposes BASLABEL DELETE ME WHEN DONE
@@ -586,24 +586,26 @@ void readIncFreq() { // ISR
 
 	signal.recvFreq =  constrain( currentTime, 0 , 100 ) / 2 ; // only responds to falling flank
 	
+	
 	recvFreqT = 128;
 }
 
 
 void initRR() {
-	Serial.println("INITIALIZING");
 	//motor.attach( servoPin ) ; 
 	//motor.write( 45 ) ; 
+	cli();
 	attachInterrupt(digitalPinToInterrupt( interruptPin ), readIncFreq, FALLING) ;
+	sei();
 
 	signal.locked = 0 ;
 	signal.section = available ;
-	signal.type = germanPreSignal ;
+	signal.type = dutchPreSignal ;
 	signal.state = green ;
 	signal.wasLocked = 0 ;
  
 	
-	Serial.println("INITIALIZING FINISHED");
+	Serial.println("BOOTED!!");
 }
 
 
