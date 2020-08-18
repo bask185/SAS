@@ -32,6 +32,7 @@ a signal can be controlled by several types of inputs:
 Servo  motor;
 
 uint8_t newState ;
+uint8_t	mode;
 uint8_t previousState = 255;
 
 enum signalTypes {
@@ -255,8 +256,7 @@ uint8_t fallTimeControl() {
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
 		fallT == 0 ;
-		signal.section = available ;
-		Serial.println("section freed");
+		//signal.section = available ; DONE IN COMPUTE LOGIC
 
 		if( signal.type == combiSignal) {		// combi signal goes first to yellow before going to green
 			if( signal.state == red ) {
@@ -339,32 +339,26 @@ void computeLogic() {
 		if( signal.wasLocked ) {								// if the signal was locked, it's previous state must be assumed
 			signal.wasLocked = 0 ;
 			newState = signal.lastState ;
-			Serial.print("assuming last state: ") ; Serial.println(signal.lastState);
+			Serial.print("signal unlocked assuming last state: ") ; Serial.println(signal.lastState);
 		}
 
 		if( signal.detectorState == FALLING ) { 				// if the detector sees a train, the state of the section is occupied NOTE MIGHT BE OFF INSTEAD OF FALLING
 			signal.section = occupied ; 
 			newState = red ;
-			signal.state = red ;
-			Serial.println("section freed");
+			//signal.state = red ;
+			Serial.println("section occupied");
 		}	
 
-		signal.recvFreq = 0 ;	// DELETE ME
 		if( signal.recvFreq == 0 ) {							// if not connected to adjacent signal.
 
 			newState = fallTimeControl() ;						// handles the time based signal states TO BE TESTED
 			if(newState) {Serial.print("fall time returned: ");Serial.println(newState);}
 
-			/*if( newState == green || newState == yellow ) {
-				signal.section = available ; 					// after the time-out the section becomes available again.
-			}*/
 		}	
 		else {
 			newState = readSignals() ;							// these are the signals from the following modules, only returns a value upon change.
 			if(newState){ Serial.print("reading signals returned: ");Serial.println(newState);}
 		}
-
-
 
 		//newState = processButtons() ;							
 		//newState = processButtons() ; 				// occupied section can be overruled by a button press
@@ -373,7 +367,13 @@ void computeLogic() {
 			previousButtonState = buttonState;
 			newState = buttonState ;
 		}
+
+		if( newState == green || newState == yellow ) {
+			signal.section = available ; 					// after the time-out the section becomes available again.
+			Serial.println("section freed");
+		}
 	}	
+
 	else {														// if signal is locked, the state is red
 		signal.state = red ;
 		signal.wasLocked = 1 ;
@@ -556,10 +556,11 @@ void servoControl() {
 // 20Hz  -> 50ms
 // 100Hz -> 10ms
 void sendSignals() {
+
 	static uint8_t state = 0, counter = 0;
 
 	if( !sendFreqT ) {
-		sendFreqT = map( signal.sendFreq, 20, 100, 50, 10 ) ;
+		sendFreqT = map( /*signal.sendFreq*/ mode , 20, 100, 50, 10 ) ;	// TEMPORARILY OVERRULED BY SERIAL INPUT
 
 		static uint8_t prevFreq ;
 		if( signal.sendFreq != prevFreq ) {
@@ -577,16 +578,20 @@ void sendSignals() {
 		switch( signal.state ) { // note pre signals are not supposed to send signals back
 			case green:			signal.sendFreq = greenFreq ;	break ;
 			case yellow:		signal.sendFreq = yellowFreq ;	break ;
-			case red:			signal.sendFreq = redFreq ;	break ;
+			case red:			signal.sendFreq = redFreq ;		break ;
 			case driveOnSight:	signal.sendFreq = yellowFreq ;	break ; // in the event of driving on sight, signal yellow to previous staet
 		}
 		
 		state ^= 1 ;
 		if( state ) {
+			pinMode( interruptPin, OUTPUT );
+			digitalWrite ( interruptPin, HIGH );
+
 			pinMode( nextSignal, OUTPUT ) ;			// pull signal down
 			digitalWrite( nextSignal, LOW ) ;
 		}
 		else {
+			digitalWrite ( interruptPin, LOW );
 			digitalWrite( nextSignal, HIGH ) ; // delete me
 			//pinMode( nextSignal, INPUT_PULLUP ) ;	// pull signal up
 		}
@@ -638,5 +643,14 @@ extern void processRoundRobinTasks(void) {
 	servoControl() ;	// handle the arm's servo motor including mass inertia movement
 
 	// debug stuff
-	if( Serial.read () == 'd') printStuff();
+	// if( Serial.read () == 'd') printStuff();
+	if( Serial.available () ) {
+		byte b = Serial.read() ;
+
+		if ( b == 'g' ) mode = 10 ;
+		if ( b == 'y' ) mode = 20 ;
+		if ( b == 'r' ) mode = 30 ;
+		if ( b == 'o' ) mode = 0 ;
+		if ( b == 'd' ) printStuff() ;
+	}
 }
