@@ -65,9 +65,9 @@ struct {
 	uint8_t recvFreq ; 
 	uint8_t nextState ; 
 	uint8_t locked ; 
-	uint8_t redLedState ; 
-	uint8_t yellowLedState ; 
-	uint8_t greenLedState ; 
+	uint8_t redLedState : 1 ; 
+	uint8_t yellowLedState : 1 ; 
+	uint8_t greenLedState : 1 ; 
 	uint8_t state ; 
 	uint8_t type ;
 	uint8_t section ;
@@ -76,6 +76,13 @@ struct {
 	uint8_t override ;
 	uint8_t connected ;
 } signal ;
+
+struct {
+	uint8_t transitionedToRed : 1;
+	uint8_t transitionedToYellow : 1 ;
+	uint8_t transitionedToGreen : 1 ;
+	uint8_t state ;
+} nextSignal ;
 
 
 const uint8_t greenFreq = 10 ;
@@ -108,7 +115,7 @@ void printStuff(){
 		Serial.print("send Freq       : "); Serial.println( signal.sendFreq );
 		Serial.print("recv Freq       : "); Serial.println( signal.recvFreq );
 		Serial.print("nextState       : ");
-		switch(signal.nextState) {
+		switch(nextSignal.state) {
 			printType(green);
 			printType(yellow);
 			printType(red);
@@ -151,7 +158,7 @@ void printStuff(){
 
 /******************** READ AND DEBOUNCE INPUTS **********************/
 void readInputs() {
-	// static uint8_t signal.nextStatePrev ;
+	// static uint8_t nextSignal.statePrev ;
 
 	if( !debounceT ) {
 		debounceT = 200 ; // 200ms debounce time
@@ -169,42 +176,48 @@ void readInputs() {
 	signal.locked = lockSignal.getState()  ;
 
 	if( signal.type == entrySignal ) { // in the event of an entry signal, the lockpin must be inverted
-			 if( signal.locked ==  ON ) signal.locked == OFF ; // 
+		if(		 signal.locked ==  ON ) signal.locked == OFF ; // 
 		else if( signal.locked == OFF ) signal.locked ==  ON ;
 	}
 	
 	// read in the detector
 	signal.detectorState = detector.getState() ;
+	
 
 	// read in incomming signal from following module
 	signal.connected = 1; // set true
-	if (	 signal.recvFreq >  greenFreq - 3 && signal.recvFreq <  greenFreq + 3 ) { signal.nextState =     green ; }
-	else if( signal.recvFreq > yellowFreq - 3 && signal.recvFreq < yellowFreq + 3 ) { signal.nextState =    yellow ; }
-	else if( signal.recvFreq >    redFreq - 3 && signal.recvFreq <    redFreq + 3 ) { signal.nextState =       red ; }
-	else { signal.connected = 0;													  signal.nextState = undefined ; } // no known frequency means not connected
+	if (	 signal.recvFreq >  greenFreq - 3 && signal.recvFreq <  greenFreq + 3 ) { nextSigal.state =     green ; }
+	else if( signal.recvFreq > yellowFreq - 3 && signal.recvFreq < yellowFreq + 3 ) { nextSigal.state =    yellow ; }
+	else if( signal.recvFreq >    redFreq - 3 && signal.recvFreq <    redFreq + 3 ) { nextSigal.state =       red ; }
+	else { signal.connected = 0;													  nextSigal.state = undefined ; } // no known frequency means not connected
 }
 
 
-uint8_t readSignals() {
+uint8_t processSignals() {
 	static uint8_t previousSignalState;
 
-	if( previousSignalState != signal.nextState ) {
-		previousSignalState = signal.nextState ;
+	if( previousSignalState != nextSignal.state ) {
+		previousSignalState = nextSignal.state ;
+
+		switch( nextSignal.state ) {	// set these flags
+			case green:  nextSigal.transitionedToRed	= 1 ; break ;
+			case yellow: nextSigal.transitionedToYellow	= 1 ; break ;
+			case red:	 nextSigal.transitionedToGreen	= 1 ; break ;
+		}
 
 		switch( signal.type ) {
 		
 		/* DUTCH PRE SIGNAL KNOWS ONLY EXPECTING GREEN OR RED */
 		case dutchPreSignal: 
-			switch( signal.nextState ) {
+			switch( nextSignal.state ) {
 				default:	 return undefined ;
-				case green:	  
-				case yellow: return expectGreen ; 
+				case green:	 return expectGreen ; 
 				case red:	 return expectRed ; 
 			}
 
 		/* GERMAN PRE SIGNAL KNOWS EXPECTING GREEN, YELLOW OR RED */
 		case germanPreSignal:
-			switch( signal.nextState ) {
+			switch( nextSignal.state ) {
 				default:	 return undefined ;
 				case green:  return expectGreen ;
 				case yellow: return expectYellow ;
@@ -212,7 +225,7 @@ uint8_t readSignals() {
 			}
 
 		case mainSignal:	// if a main signal receives a signal that the following state is red, it's own state becomes green
-			switch( signal.nextState ) {
+			switch( nextSignal.state ) {
 				default:
 				case green:  
 				case yellow: return undefined ; // ignore green and yellow states
@@ -220,11 +233,11 @@ uint8_t readSignals() {
 			}
 
 		case combiSignal:
-			switch( signal.nextState ) {
+			switch( nextSignal.state ) {
 				default:	 return undefined ;
 				case green:
 				case yellow: return green ;
-				case red:	 signal.section = available; return yellow ;
+				case red:	  return yellow ;
 			}
 		}
 	}
@@ -251,7 +264,6 @@ uint8_t fallTimeControl() {
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
 		fallT = 0 ;
-		//signal.section = available ; DONE IN COMPUTE LOGIC
 
 		if( signal.type == combiSignal) {		// combi signal goes first to yellow before going to green
 			if( signal.state == red ) {
@@ -276,18 +288,22 @@ uint8_t fallTimeControl() {
 uint8_t processButtons() {
 
 	if( greenButton.getState () == FALLING ) {
+		signal.override = 0 ;
+
 		if( signal.section == occupied 
 		&&  signal.type != mainSignal ) return driveOnSight ; 
 		else							return green ; 
 	}
 
 	if( yellowButton.getState () == FALLING ) {
+		signal.override = 1 ;
 		if( signal.section == occupied 
 		&&  signal.type != mainSignal ) return driveOnSight ;
 		else							return yellow ;
 	}
 
 	if( redButton.getState () == FALLING ) {
+		signal.override = 1 ;
 		return red ;
 	}
 
@@ -321,6 +337,26 @@ uint8_t processButtons() {
 *	a red showing signal. If that is the case the state of the signal
 *	will display drive-on-sight. A locked signal can not be overriden
 
+* KNOWN BUGS
+- If a train passes a combi signal this signal becomes red, but it may be that the following signal sends a signal which turns this 
+signal on green, eventhough a train just past. A transition from red to orange may from the following module may 'free' the block.
+a transition from orange to green may not free the block. If the block is not freed, the combi signal must not be allowed to transition
+to green.
+
+- if an entire section is used to detect a train a combiSignal must use both the detector as well as the following signal. A signal
+must remember that the following module transitioned to red (which would normally free the block). If the following combi signal jumps
+to red while the detector still sees a train, the combin signal must not transition to yellow.
+when it's own detector has rissen AND the following module is red, than a combiSignal may become orange. 
+For this to work with both short and long detected sections, a rissen flag must be added to SW
+
+Note:
+when may a red showing combi signal become green?
+	the detector must have rissen and the following signal must have transitioned to red -> SECTION FREED AND signal is not override by yellow or red
+
+when may a yellow showing combi signal become green?
+	The section must be free and the following module
+
+
 */
 
 /***********************
@@ -337,28 +373,66 @@ void computeLogic() {
 	uint8_t newButtonState   = undefined ;
 	uint8_t newState		 = undefined ;
 	
+
+	if( signal.type == dutchPreSignal || signal.type == germanPreSignal ) { // pre signals do not bother them selfes with locks, direction and detectors.
+		newSignalState = processSignals() ;
+	}
 	// the SAS can work both with partially detected blocks as fully detected blocks
-	if( signal.locked == ON ) {									// if signal is not locked (inverted signal)
+	else if( signal.locked == ON ) {							// if signal is not locked (inverted signal)
 
 		if( signal.wasLocked ) {								// if the signal was locked, it's previous state must be assumed
 			signal.wasLocked = 0 ;
-			newState = signal.lastState ;						// need a new variable for this
+			newState = signal.lastState ;
 		}
 
-		if( signal.detectorState == FALLING ) { 				// if the detector sees a train (only 1 flank), the state of the section is occupied NOTE MIGHT BE OFF INSTEAD OF FALLING
+		if( detector.hasFallen ) { 								// if the detector sees a train (only 1 flank), the state of the section is occupied NOTE MIGHT BE OFF INSTEAD OF FALLING
+			detector.hasFallen = 0;
+
 			signal.section = occupied ; 
-			newDetectorState = red ;
 		} 
 
 		if( signal.connected == 0 ) {							// if not connected to adjacent signal.
 			newFallTimeState = fallTimeControl() ;				// handles the time based signal states TO BE TESTED
+
+			if( newFallTimeState == yellow || newFallTimeState == green ) {
+				signal.section = available ;
+			}
 		}	
 		else {
-			newSignalState = readSignals() ;							// these are the signals from the following modules, only returns a value upon change.
+			//newSignalState = processSignals() ;							// these are the signals from the following modules, only returns a value upon change.
+
+			if( detector.hasRissen == 1 && nextSigal.transitionedToRed == 1 ) {	// if detector has rissen AND tthe adjacent signal jumped to red. Our section may now be free
+				detector.hasRissen = 0 ;   nextSigal.transitionedToRed = 0 ;
+
+				signal.section = available ;
+			}
 		}
 
+		if( signal.override == 0 ) {
+
+			if( signal.section == occupied ) {									// occupied sections let signal show red, period!!
+				newState = red ;
+			}	
+			else if( signal.section == available ) {							// non occupied sections may display green or yellow depening on the next signal.
+				if( nextSignal.transitionedToRed ) {
+					nextSignal.transitionedToRed = 0 ;
+
+					if( signal.type == mainSignal )  newState = green ;
+					if( signal.type == combiSignal ) newState = yellow;
+				}
+				else if( nextSignal.transitionedToYellow ) {
+					nextSignal.transitionedToYellow = 0;
+
+					newState = green ;
+				}
+			}
+		}
 
 		newButtonState = processButtons();
+		if( newButtonState == green _
+			case green: signal.override = 0; break ;
+			case yellow:
+			case red:	signal.i
 	}	
 
 	else {														// if signal is locked, the state is unconditional red

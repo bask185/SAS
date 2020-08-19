@@ -45,7 +45,10 @@ Debounce::Debounce(unsigned char _pin) {
 unsigned char Debounce::getState() {
 	byte retValue = state;
 
-	if(state == RISING)  state = ON; // take note I use a pull-up resistor
+	if(state == RISING)  {
+		state = ON; // take note I use a pull-up resistor
+		hasRissen = true ;
+	}
 	if(state == FALLING) state = OFF;  // rising or falling may be returned only once
 
 	return retValue;

@@ -19,6 +19,7 @@ public:
 	// bool isLow() ;
 	unsigned char getState() ;
 	void debounce() ;
+	unsigned char hasRissen;
 
 private:
 	unsigned char state ;
