@@ -49,7 +49,10 @@ unsigned char Debounce::getState() {
 		state = ON; // take note I use a pull-up resistor
 		hasRissen = true ;
 	}
-	if(state == FALLING) state = OFF;  // rising or falling may be returned only once
+	if(state == FALLING) {
+		state = OFF;  // rising or falling may be returned only once
+		hasFallen = true ;
+	}
 
 	return retValue;
 }

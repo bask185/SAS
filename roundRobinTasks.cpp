@@ -78,9 +78,9 @@ struct {
 } signal ;
 
 struct {
-	uint8_t transitionedToRed : 1;
-	uint8_t transitionedToYellow : 1 ;
-	uint8_t transitionedToGreen : 1 ;
+	uint8_t transitionedToRed ;
+	uint8_t transitionedToYellow ;
+	uint8_t transitionedToGreen  ;
 	uint8_t state ;
 } nextSignal ;
 
@@ -115,7 +115,7 @@ void printStuff(){
 		Serial.print("send Freq       : "); Serial.println( signal.sendFreq );
 		Serial.print("recv Freq       : "); Serial.println( signal.recvFreq );
 		Serial.print("nextState       : ");
-		switch(nextSignal.state) {
+		switch( nextSignal.state ) {
 			printType(green);
 			printType(yellow);
 			printType(red);
@@ -182,14 +182,17 @@ void readInputs() {
 	
 	// read in the detector
 	signal.detectorState = detector.getState() ;
+	if(signal.detectorState == RISING ) {Serial.println("DETECTOR ROSE ");}
+	if(signal.detectorState == FALLING ) {Serial.println("DETECTOR FELL ");}
+	
 	
 
 	// read in incomming signal from following module
 	signal.connected = 1; // set true
-	if (	 signal.recvFreq >  greenFreq - 3 && signal.recvFreq <  greenFreq + 3 ) { nextSigal.state =     green ; }
-	else if( signal.recvFreq > yellowFreq - 3 && signal.recvFreq < yellowFreq + 3 ) { nextSigal.state =    yellow ; }
-	else if( signal.recvFreq >    redFreq - 3 && signal.recvFreq <    redFreq + 3 ) { nextSigal.state =       red ; }
-	else { signal.connected = 0;													  nextSigal.state = undefined ; } // no known frequency means not connected
+	if (	 signal.recvFreq >  greenFreq - 3 && signal.recvFreq <  greenFreq + 3 ) { nextSignal.state =     green ; }
+	else if( signal.recvFreq > yellowFreq - 3 && signal.recvFreq < yellowFreq + 3 ) { nextSignal.state =    yellow ; }
+	else if( signal.recvFreq >    redFreq - 3 && signal.recvFreq <    redFreq + 3 ) { nextSignal.state =       red ; }
+	else { signal.connected = 0;													  nextSignal.state = undefined ; } // no known frequency means not connected
 }
 
 
@@ -200,9 +203,9 @@ uint8_t processSignals() {
 		previousSignalState = nextSignal.state ;
 
 		switch( nextSignal.state ) {	// set these flags
-			case green:  nextSigal.transitionedToRed	= 1 ; break ;
-			case yellow: nextSigal.transitionedToYellow	= 1 ; break ;
-			case red:	 nextSigal.transitionedToGreen	= 1 ; break ;
+			case red:    nextSignal.transitionedToRed	 = 1 ; Serial.println(" nextSignal.transitionedToRed"); break ;
+			case yellow: nextSignal.transitionedToYellow = 1 ; Serial.println(" nextSignal.transitionedToYellow"); break ;
+			case green:	 nextSignal.transitionedToGreen	 = 1 ; Serial.println(" nextSignal.transitionedToGreen");break ;
 		}
 
 		switch( signal.type ) {
@@ -226,10 +229,8 @@ uint8_t processSignals() {
 
 		case mainSignal:	// if a main signal receives a signal that the following state is red, it's own state becomes green
 			switch( nextSignal.state ) {
-				default:
-				case green:  
-				case yellow: return undefined ; // ignore green and yellow states
-				case red:	 signal.section = available; return green ;
+				default:	 return undefined ; // ignore green and yellow states
+				case red:	 return green ;
 			}
 
 		case combiSignal:
@@ -237,7 +238,7 @@ uint8_t processSignals() {
 				default:	 return undefined ;
 				case green:
 				case yellow: return green ;
-				case red:	  return yellow ;
+				case red:	 return yellow ;
 			}
 		}
 	}
@@ -389,6 +390,7 @@ void computeLogic() {
 			detector.hasFallen = 0;
 
 			signal.section = occupied ; 
+			Serial.println("section is ocupied");
 		} 
 
 		if( signal.connected == 0 ) {							// if not connected to adjacent signal.
@@ -396,43 +398,44 @@ void computeLogic() {
 
 			if( newFallTimeState == yellow || newFallTimeState == green ) {
 				signal.section = available ;
+				Serial.println("section is made available by fall time controll");
 			}
 		}	
 		else {
-			//newSignalState = processSignals() ;							// these are the signals from the following modules, only returns a value upon change.
+			processSignals() ;							// these are the signals from the following modules, only returns a value upon change.
 
-			if( detector.hasRissen == 1 && nextSigal.transitionedToRed == 1 ) {	// if detector has rissen AND tthe adjacent signal jumped to red. Our section may now be free
-				detector.hasRissen = 0 ;   nextSigal.transitionedToRed = 0 ;
+			if( detector.hasRissen == 1 && nextSignal.transitionedToRed == 1 ) {	// if detector has rissen AND tthe adjacent signal jumped to red. Our section may now be free
+				  /* nextSignal.transitionedToRed = 0;*/
 
 				signal.section = available ;
+				Serial.println("section is available because the following signal became red and I dont see a train anymore");
 			}
 		}
 
-		if( signal.override == 0 ) {
+		//if( signal.override == 0 ) {
 
-			if( signal.section == occupied ) {									// occupied sections let signal show red, period!!
-				newState = red ;
-			}	
-			else if( signal.section == available ) {							// non occupied sections may display green or yellow depening on the next signal.
-				if( nextSignal.transitionedToRed ) {
-					nextSignal.transitionedToRed = 0 ;
+		if( signal.section == occupied ) {									// occupied sections let signal show red, period!!
+			newState = red ;
+		}	
+		else if( signal.section == available ) {							// non occupied sections may display green or yellow depening on the next signal.
+			if( nextSignal.transitionedToYellow == 1 ) {
+				nextSignal.transitionedToYellow = 0 ;
 
-					if( signal.type == mainSignal )  newState = green ;
-					if( signal.type == combiSignal ) newState = yellow;
-				}
-				else if( nextSignal.transitionedToYellow ) {
-					nextSignal.transitionedToYellow = 0;
+				newState = green ; Serial.println("prev signal became yellow, I as combi signal became green");
+			}
+			if( nextSignal.transitionedToRed == 1 ) {
+				nextSignal.transitionedToRed = 0 ;
+				detector.hasRissen = 0 ;
 
-					newState = green ;
-				}
+				if( signal.type == mainSignal ) {  newState = green ; Serial.println("prev signal became red, I as main signal became green"); }
+				if( signal.type == combiSignal ){  newState = yellow; Serial.println("prev signal became red, I as combi signal became yellow"); }
 			}
 		}
+		//}
 
 		newButtonState = processButtons();
-		if( newButtonState == green _
-			case green: signal.override = 0; break ;
-			case yellow:
-			case red:	signal.i
+		if( newButtonState == green ) 	{ signal.override = 0 ; }
+		else 							{ signal.override = 1 ; }
 	}	
 
 	else {														// if signal is locked, the state is unconditional red
@@ -451,22 +454,22 @@ void computeLogic() {
 
 		signal.lastState = signal.state = newState ; 	// if a new state is selected, adopt it and store it.
 
-		if( newState == green || newState == yellow ) {		// if new state equals green or yellow, the section is no longer occupied
-			signal.section = available ; 					// after the time-out the section becomes available again.
-			Serial.println("section freed") ;
-		}
+		// if( newState == green || newState == yellow ) {		// if new state equals green or yellow, the section is no longer occupied
+		// 	signal.section = available ; 					// after the time-out the section becomes available again.
+		// 	Serial.println("section freed") ;
+		// }
 
-		Serial.print("new state = ");  // print new state for debugging purposes BASLABEL DELETE ME WHEN DONE
-		switch( newState ) {
-			printNewState( red ) ;
-			printNewState( green ) ;
-			printNewState( yellow ) ;
-			printNewState( undefined ) ;
-			printNewState( expectGreen ) ;
-			printNewState( expectYellow ) ;
-			printNewState( expectRed ) ;
-			printNewState( driveOnSight ) ;
-		}
+		// Serial.print("new state = ");  // print new state for debugging purposes BASLABEL DELETE ME WHEN DONE
+		// switch( newState ) {
+		// 	printNewState( red ) ;
+		// 	printNewState( green ) ;
+		// 	printNewState( yellow ) ;
+		// 	printNewState( undefined ) ;
+		// 	printNewState( expectGreen ) ;
+		// 	printNewState( expectYellow ) ;
+		// 	printNewState( expectRed ) ;
+		// 	printNewState( driveOnSight ) ;
+		// }
 	}
 }
 
@@ -644,11 +647,11 @@ void sendSignals() {
 		
 		state ^= 1 ;
 		if( state ) {
-			pinMode( nextSignal, OUTPUT ) ;			// pull signal down
-			digitalWrite( nextSignal, LOW ) ;
+			pinMode( Tx, OUTPUT ) ;			// pull signal down
+			digitalWrite( Tx, LOW ) ;
 		}
 		else {
-			pinMode( nextSignal, INPUT_PULLUP ) ;	// pull signal up
+			pinMode( Tx, INPUT_PULLUP ) ;	// pull signal up
 		}
 	}
 }
@@ -669,14 +672,17 @@ void initRR() {
 	//motor.attach( servoPin ) ; 
 	//motor.write( 45 ) ; 
 	cli();
-	attachInterrupt(digitalPinToInterrupt( interruptPin ), readIncFreq, FALLING) ;
+	attachInterrupt(digitalPinToInterrupt( Rx ), readIncFreq, FALLING) ;
 	sei();
 
 	signal.locked = 0 ;
 	signal.section = available ;
-	signal.type = dutchPreSignal ;
+	signal.type = combiSignal ;
 	signal.state = green ;
 	signal.wasLocked = 0 ;
+	signal.greenLedState = 1;
+	signal.yellowLedState = 0;
+	signal.redLedState = 0;
  
 	
 	Serial.println("BOOTED!!");

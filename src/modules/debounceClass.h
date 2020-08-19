@@ -20,6 +20,7 @@ public:
 	unsigned char getState() ;
 	void debounce() ;
 	unsigned char hasRissen;
+	unsigned char hasFallen ;
 
 private:
 	unsigned char state ;
