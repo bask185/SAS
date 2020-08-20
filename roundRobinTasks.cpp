@@ -289,7 +289,6 @@ uint8_t fallTimeControl() {
 uint8_t processButtons() {
 
 	if( greenButton.getState () == FALLING ) {
-		signal.override = 0 ;
 
 		if( signal.section == occupied 
 		&&  signal.type != mainSignal ) return driveOnSight ; 
@@ -297,14 +296,12 @@ uint8_t processButtons() {
 	}
 
 	if( yellowButton.getState () == FALLING ) {
-		signal.override = 1 ;
 		if( signal.section == occupied 
 		&&  signal.type != mainSignal ) return driveOnSight ;
 		else							return yellow ;
 	}
 
 	if( redButton.getState () == FALLING ) {
-		signal.override = 1 ;
 		return red ;
 	}
 
@@ -373,6 +370,7 @@ void computeLogic() {
 	uint8_t newFallTimeState = undefined ;
 	uint8_t newButtonState   = undefined ;
 	uint8_t newState		 = undefined ;
+	uint8_t temp 			 = undefined ;
 	
 
 	if( signal.type == dutchPreSignal || signal.type == germanPreSignal ) { // pre signals do not bother them selfes with locks, direction and detectors.
@@ -404,34 +402,32 @@ void computeLogic() {
 		else {
 			processSignals() ;							// these are the signals from the following modules, only returns a value upon change.
 
-			if( detector.hasRissen == 1 && nextSignal.transitionedToRed == 1 ) {	// if detector has rissen AND tthe adjacent signal jumped to red. Our section may now be free
-				  /* nextSignal.transitionedToRed = 0;*/
+			if( signal.section == occupied && nextSignal.transitionedToRed == 1 ) {	// if detector has rissen AND the adjacent signal jumped to red. Our section may now be free
+				signal.section = available ;  nextSignal.transitionedToRed = 0 ;
 
-				signal.section = available ;
-				Serial.println("section is available because the following signal became red and I dont see a train anymore");
+				temp = red;
+				Serial.println("section is available because the following signal became red and I was occupied");
 			}
 		}
 
-		//if( signal.override == 0 ) {
+		if( signal.override == 0 ) {											// if a button has overwrittent the signal, it may no longer occur
 
-		if( signal.section == occupied ) {									// occupied sections let signal show red, period!!
-			newState = red ;
-		}	
-		else if( signal.section == available ) {							// non occupied sections may display green or yellow depening on the next signal.
-			if( nextSignal.transitionedToYellow == 1 ) {
-				nextSignal.transitionedToYellow = 0 ;
+			if( signal.section == occupied ) {									// occupied sections let signal show red, period!!
+				newState = red ;
+			}	
+			else if( signal.section == available ) {							// non occupied sections may display green or yellow depening on the next signal.
+				if( nextSignal.transitionedToYellow == 1 ) {
+					nextSignal.transitionedToYellow = 0 ;
 
-				newState = green ; Serial.println("prev signal became yellow, I as combi signal became green");
-			}
-			if( nextSignal.transitionedToRed == 1 ) {
-				nextSignal.transitionedToRed = 0 ;
-				detector.hasRissen = 0 ;
+					newState = green ; Serial.println("prev signal became yellow, I as combi signal became green");
+				}
+				if( temp == red ) {
 
-				if( signal.type == mainSignal ) {  newState = green ; Serial.println("prev signal became red, I as main signal became green"); }
-				if( signal.type == combiSignal ){  newState = yellow; Serial.println("prev signal became red, I as combi signal became yellow"); }
+					if( signal.type == mainSignal ) {  newState = green ; Serial.println("prev signal became red, I as main signal became green"); }
+					if( signal.type == combiSignal ){  newState = yellow; Serial.println("prev signal became red, I as combi signal became yellow"); }
+				}
 			}
 		}
-		//}
 
 		newButtonState = processButtons();
 		if( newButtonState == green ) 	{ signal.override = 0 ; }
@@ -445,10 +441,10 @@ void computeLogic() {
 	}
 
 	//newState |= newSignalState | newDetectorState | newFallTimeState | newButtonState ; was a brainfart but is not safe when more than one newstate is set. It is unlikely, but t
-	if(		 newSignalState   != undefined ) newState = newSignalState  ;
-	else if( newDetectorState != undefined ) newState = newDetectorState ;
-	else if( newFallTimeState != undefined ) newState = newFallTimeState ;
-	else if( newButtonState   != undefined ) newState = newButtonState ;
+	if(		 newSignalState   != undefined ) { newState = newSignalState  ;  Serial.println("newSignalState"); }
+	else if( newDetectorState != undefined ) { newState = newDetectorState ; Serial.println("newDetectorState"); }
+	else if( newFallTimeState != undefined ) { newState = newFallTimeState ; Serial.println("newFallTimeState"); }
+	else if( newButtonState   != undefined ) { newState = newButtonState ;   Serial.println("newButtonState"); }
 
 	if( newState != undefined ) {
 
