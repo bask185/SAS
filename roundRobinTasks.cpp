@@ -402,7 +402,7 @@ void computeLogic() {
 		else {
 			processSignals() ;							// these are the signals from the following modules, only returns a value upon change.
 
-			if( signal.section == occupied && nextSignal.transitionedToRed == 1 ) {	// if detector has rissen AND the adjacent signal jumped to red. Our section may now be free
+			if( detector.getState() == ON && nextSignal.transitionedToRed == 1 ) {	// if detector has rissen AND the adjacent signal jumped to red. Our section may now be free
 				signal.section = available ;  nextSignal.transitionedToRed = 0 ;
 
 				temp = red;
@@ -410,7 +410,7 @@ void computeLogic() {
 			}
 		}
 
-		if( signal.override == 0 ) {											// if a button has overwrittent the signal, it may no longer occur
+		//if( signal.override == 0 ) {											// if a button has overwrittent the signal, it may no longer occur
 
 			if( signal.section == occupied ) {									// occupied sections let signal show red, period!!
 				newState = red ;
@@ -427,7 +427,7 @@ void computeLogic() {
 					if( signal.type == combiSignal ){  newState = yellow; Serial.println("prev signal became red, I as combi signal became yellow"); }
 				}
 			}
-		}
+		//}
 
 		newButtonState = processButtons();
 		if( newButtonState == green ) 	{ signal.override = 0 ; }
