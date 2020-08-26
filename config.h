@@ -1,5 +1,12 @@
 #include <Arduino.h>
+#include "src/modules/debounceClass.h"
 
+
+extern Debounce detector( ) ;
+extern Debounce lockSignal( ) ;
+extern Debounce redButton( ) ;
+extern Debounce yellowButton( ) ;
+extern Debounce greenButton( ) ;
 
 typedef struct {
 	uint8_t buttons ;
@@ -30,3 +37,34 @@ typedef struct {
 } NextSignal ;
 
 extern NextSignal nextSignal ;
+
+enum signalTypes {
+	mainSignal,
+	combiSignal,
+	germanPreSignal,
+	dutchPreSignal,
+	entrySignal,
+} ;
+
+enum signalStates {
+	undefined,
+	red,		// main signal states
+	yellow,
+	green,
+	driveOnSight,
+	expectGreen, // pre signal states
+	expectYellow,
+	expectRed
+} ;
+
+enum sections {
+	occupied,
+	available,
+} ;
+
+const uint8_t greenFreq = 10 ;
+const uint8_t yellowFreq = 20 ;
+const uint8_t redFreq = 30 ;
+
+extern uint8_t mode ;
+extern uint8_t previousState ;

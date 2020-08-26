@@ -5,8 +5,6 @@
 #include "output.h"
 #include "config.h"
 
-
-
 void setup() {
 	cli();
 	
@@ -27,28 +25,6 @@ void setup() {
 }
 
 #define printNewState(x) case x: Serial.println(#x); break;
-
-Debounce detector( detectorPin );
-Debounce lockSignal( lockPin );
-Debounce redButton( redPin );
-Debounce yellowButton( yellowPin );
-Debounce greenButton( greenPin );
-
-/* signals to and from signals explained
-a signal can be controlled by several types of inputs:
- 1* the section feedback IO behind the signal will put the signal on red, uncondionally.
- 2* if this signal is not followed by another signal, the red signal will turn green after a certain amount of time.
- 3* if the signal receives a signal from a following signal, the signal may become green or yellow depening on it's type.
- 4* optional buttons may override the signals upon a press.
-
- a signal may pull down an open collector line to the previous signal to indicate that that signal is red.
- Upon receiving this signal, the previous signal may turn itself green if it is a main type signal. A combi signal will
- become yellow instead. A yellow showing combi signal will signal green  to the previous signal so that one may become green.
-
- a pre signal will addopt the state of the previous signal and will relay the red/green signal to the previous signal.
-
-*/
-
 
 }
 /* General idea:
@@ -97,10 +73,7 @@ when may a red showing combi signal become green?
 
 when may a yellow showing combi signal become green?
 	The section must be free and the following module
-
-
 */
-
 
 
 
@@ -108,20 +81,31 @@ void loop() {
 	// teachIn();
 
 	// input
-	readInputs() ;
-	// processSignals();
-	// readIncFreq(); <-- ISR
+	debounceInputs()
+	readLockSignal();
+	readDetector();
+	readSignals();
+
 
 	// logic
-	computeLogic() ;	// takes input and calculate what all relevant variables should be.
+	computeLogic( &signal, &nextSignal ) ;	// takes input and calculate what all relevant variables should be.
 
 	//  output
 	sendSignals() ;		// send the signal to the adjacent module
 	fadeLeds() ;		// fade leds in and out to emulate glowblub effects, currently this takes 1/4 of a setting
 	servoControl() ;	// handle the arm's servo motor including mass inertia movement
 
-
 }
+
+void readIncFreq() { // ISR
+
+	int8_t currentTime = ( 128 - recvFreqT ) ; // recvFreqT is always decrementing.
+
+	rxFrequency =  constrain( currentTime, 0 , 100 ) ;
+	
+	recvFreqT = 128;
+}
+
 
 
 
