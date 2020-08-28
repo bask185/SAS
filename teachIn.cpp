@@ -15,7 +15,6 @@ enum EEaddresses {
 	INIT_ADDR,
 }; 
 
-uint8_t greenPwm, yellowPwm, redPwm, redServoPos, greenServoPos, signalType;
 
 Servo armServo;
 Debounce detector( detectorPin );

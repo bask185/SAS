@@ -6,6 +6,7 @@ uint8_t previousState = 255;
 
 Signal signal ;
 NextSignal nextSignal ;
+Led redLed, greenLed, yellowLed ;
 
 Debounce detector( detectorPin );
 Debounce lockSignal( lockPin );

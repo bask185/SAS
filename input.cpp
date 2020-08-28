@@ -118,7 +118,7 @@ void readSignals() {
 		/* DUTCH PRE SIGNAL KNOWS ONLY EXPECTING GREEN OR RED */
 		case dutchPreSignal: 
 			switch( nextSignal->state ) {
-				default:	 return undefined ; 	// need altering
+				default:	 return undefined ; 	// need alteringex
 				case green:	 return expectGreen ; 
 				case red:	 return expectRed ; 
 			}

@@ -15,9 +15,6 @@ typedef struct {
 	uint8_t recvFreq ; 
 	uint8_t nextState ; 
 	uint8_t locked ; 
-	uint8_t redLedState : 1 ; 
-	uint8_t yellowLedState : 1 ; 
-	uint8_t greenLedState : 1 ; 
 	uint8_t state ; 
 	uint8_t type ;
 	uint8_t section ;
@@ -37,6 +34,16 @@ typedef struct {
 } NextSignal ;
 
 extern NextSignal nextSignal ;
+
+typedef Leds {
+	uint8_t state ;
+	uint8_t max ;
+	uint8_t min ;
+	uint8_t pwm ;
+} Led ;
+
+extern Led redLed, greenLed, yellowLed ;
+	
 
 enum signalTypes {
 	mainSignal,
