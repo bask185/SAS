@@ -74,10 +74,32 @@ plaatjes
 
 plaatjes
 
+---
 ## Blokbeveiliging van een enkel sporig branchlijn met uni-directionele passeerstukken
-plaatjes
+Hier volgt mogelijke aansluit mogelijkheden om SAS modules aan te sluiten voor een enkelsporig branchlijntje waarbij de passeer stukken in slechts een richting bereden kunnen worden.
 
-## Blokbeveiliging van een enkel sporig branchlijn met uni-directionele passeerstukken
+In het eerste voorbeeld heeft elke SAS module slechts 1 bezet melder die het hele volgende blok detecteert. Dit is eigenlijk hetzelfde principe als het het eerste voorbeeld van een dubbel hoofdspoor. Wat hier is toegevoegd is een dubbeluitgevoerde rijrichting lijn. Met 1 wisselschakelaar wordt 1 van de 2 lijnen altijd naar de 0V getrokken. Dit zorgt er dat de inrijseinen van achter bereden kunnen worden en de uitrijseinen vertonen nu alleen groen als en het volgende blok vrij is en de rijrichting is goed ingesteld.
+
+![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img1-1.png "1-1")
+
+Bovenstaand voorbeeld is de meest simpele doch effectieve manier. Wat hier echter aan nog ontbreekt zijn wisselbeveiligingen. Natuurlijk zou je magneetwissels mee kunnen schakelen met de rijrichting lijnen (mits de wissels een eindafschakeling hebben) dan weet je ook zeker dat die ten alle tijden goed staan.
+
+Als uitbreiding op het vorige voorbeeld heb ik een extra rijrichting schakelaar toegevoegd (voor het andere station) en de wissels zijn voorzien van een dubbelpolige wisselmodule. Deze wisselmodule is in staat om de rijrichtingen naar de 0V te trekken. In dit scenario mag een sein pas in groen als beide rijrichting schakelaars goed staan en als beide wissels goed staan. Als een schakelaar of wissel verkeerd staat dan zijn de seinen in beide richtingen vergrendeld.
+
+![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img1-2.png "1-2")
+
+Om in plaats van deze daadwerkelijke wisselbeveiliging toe te passen kan je, zoals ik eerder heb benoemd, magneetwissels met eindafschakeling mee laten schakelen op de rijrichting lijnen. De wissels kunnen dan fysiek nooit meer fout staan. Er komt wel een maar bij kijken. Beide rijrichting lijnen mogen onder geen omstandigheden tegelijkertijd naar 0V worden getrokken. Daarom mag er ook slechts 1 schakelaar zijn voor de rijrichting.
+
+![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img1-3.png "1-3")
+
+Zoals in het vorige hoofdstuk ook is getoond, kan SAS ook hier gebruik maken van korte detectiestukjes. In dat geval is het nodig om ook de communicatie lijnen te trekken tussen de seinen.
+
+![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img1-4.png "1-4")
+Zoals je ziet lijkt de beveiliging erg veel op dat van een dubbelspoor met als toevoeging twee rijrichtinglijnen en optionele wisselbeveilingen en wisselaansturing.
+
+---
+## Beveiliging van stations
+Aanvankelijk wilde ik nog een stukje maken voor het bovenstaande voorbeeld met 
 plaatjes
 
 ## Blokbeveiliging van een enkel sporig branchlijn met uni-directionele passeerstukken
