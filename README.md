@@ -78,7 +78,7 @@ plaatjes
 ## Blokbeveiliging van een enkel sporig branchlijn met uni-directionele passeerstukken
 Hier volgt mogelijke aansluit mogelijkheden om SAS modules aan te sluiten voor een enkelsporig branchlijntje waarbij de passeer stukken in slechts een richting bereden kunnen worden.
 
-In het eerste voorbeeld heeft elke SAS module slechts 1 bezet melder die het hele volgende blok detecteert. Dit is eigenlijk hetzelfde principe als het het eerste voorbeeld van een dubbel hoofdspoor. Wat hier is toegevoegd is een dubbeluitgevoerde rijrichting lijn. Met 1 wisselschakelaar wordt 1 van de 2 lijnen altijd naar de 0V getrokken. Dit zorgt er dat de inrijseinen van achter bereden kunnen worden en de uitrijseinen vertonen nu alleen groen als en het volgende blok vrij is en de rijrichting is goed ingesteld.
+In het eerste voorbeeld heeft elke SAS module slechts 1 bezet melder die het hele volgende blok detecteert. Dit is eigenlijk hetzelfde principe als het het eerste voorbeeld van een dubbel hoofdspoor. Wat hier is toegevoegd is een dubbeluitgevoerde rijrichtinglijn. Met 1 wisselschakelaar wordt 1 van de 2 lijnen altijd naar de 0V getrokken. Dit zorgt er voor dat de inrijseinen van achter bereden kunnen worden en dat de uitrijseinen nu alleen groen vertonen als het volgende blok vrij is en de rijrichting is goed ingesteld.
 
 ![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img1-1.png "1-1")
 
