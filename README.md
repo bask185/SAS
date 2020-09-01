@@ -68,7 +68,14 @@ A: Er is een ding wat een SAS niet kan. Een inrijsein kan groen of geel seinbeel
 # De werking nader uitgelegd, hoe sluit je een SAS aan?
 
 ## Blokbeveiliging van een enkel bereden dubbelsporig hoofdlijn.
-plaatjes
+
+Een van de meest makkelijke dingen die een mens kan doen, is het aansluiten van een simpel bloksysteem. In dit eerste voorbeeld zie je op de voeding van de modules na, alle te leggen verbindingen. In principe is het altijd beter om het hele blok te detecteren. Dat heb ik ook gedaan in dit voorbeeld. Zodra een trein de bezetmelder van dat blok bereikt dan zal het sein voor dat blok op rood springen.
+
+Omdat we in dit voorbeeld gebruik maken van combinatie seinen en behalve rood en groen dus ook geel kennen, is het noodzakelijk voor de werking dat tussen 2 opvolgende SAS modules een communicatie lijn wordt vervonden. Een sein in dit scenario springt pas op oranje als er twee voorwaardes waar zijn. De bezetmelder moet zijn verbroken en het volgende sein moet rood doorgeven over de communicatie lijn. Dit betekent ook, ten tijden dat een trein zich op twee blokken tegelijk bevindt, zullen beide seinen rood vertonen. Pas wanneer de melder van het eerste blok niet langer gemaakt is, vertoont het eerste sein oranje. Het eerste sein zal weer groen worden zodra het 2e sein zelf oranje wordt.
+![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img2-1.png "1-1")
+
+Voor de mensen die hollandse armseinen hebben of die een Duits seinstelsel hebben, is er de mogelijkheid om ook hoofdseinen in combinatie met voorseinen te gebruiken.
+![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img2-2.png "1-1")
 
 ## Blokbeveiliging van een dubbel bereden dubbelsporig hoofdlijn.
 
