@@ -84,7 +84,7 @@ In het eerste voorbeeld heeft elke SAS module slechts 1 bezet melder die het hel
 
 Bovenstaand voorbeeld is de meest simpele doch effectieve manier. Wat hier echter aan nog ontbreekt zijn wisselbeveiligingen. Natuurlijk zou je magneetwissels mee kunnen schakelen met de rijrichting lijnen (mits de wissels een eindafschakeling hebben) dan weet je ook zeker dat die ten alle tijden goed staan.
 
-Als uitbreiding op het vorige voorbeeld heb ik een extra rijrichting schakelaar toegevoegd (voor het andere station) en de wissels zijn voorzien van een dubbelpolige wisselmodule. Deze wisselmodule is in staat om de rijrichtingen naar de 0V te trekken. In dit scenario mag een sein pas in groen als beide rijrichting schakelaars goed staan en als beide wissels goed staan. Als een schakelaar of wissel verkeerd staat dan zijn de seinen in beide richtingen vergrendeld.
+Als uitbreiding op het vorige voorbeeld heb ik een extra rijrichting schakelaar toegevoegd (voor het andere station) en de wissels zijn voorzien van een dubbelpolige wisselmodule. Deze wisselmodule is in staat om de rijrichtingen naar de 0V te trekken. In dit scenario mag een sein pas op groen als beide rijrichting schakelaars goed staan en als beide wissels goed staan. Als een schakelaar of wissel verkeerd staat dan zijn de seinen in beide richtingen vergrendeld.
 
 ![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img1-2.png "1-2")
 
