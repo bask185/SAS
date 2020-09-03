@@ -6,10 +6,10 @@ A3	redPin	INPUT_PULLUP
 3	dccPin	INPUT
 6	relayPin	OUTPUT
 3	lockPin	INPUT_PULLUP
+A2	driveDirection	INPUT_PULLUP
 4	Tx	OUTPUT
 8	detectorPin	INPUT_PULLUP
 13	servoPin	OUTPUT
 10	greenLed	OUTPUT
 11	yellowLed	OUTPUT
 12	redLed	OUTPUT
-9	pwmPin	OUTPUT
