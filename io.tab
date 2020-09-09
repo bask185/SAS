@@ -10,6 +10,6 @@ A2	driveDirection	INPUT_PULLUP
 4	Tx	OUTPUT
 8	detectorPin	INPUT_PULLUP
 13	servoPin	OUTPUT
-10	greenLed	OUTPUT
-11	yellowLed	OUTPUT
-12	redLed	OUTPUT
+10	greenLedPin	OUTPUT
+11	yellowLedPin	OUTPUT
+12	redLedPin	OUTPUT

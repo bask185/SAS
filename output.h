@@ -4,4 +4,4 @@ extern void fadeLeds() ;
 extern void servoControl() ;
 extern void sendSignals() ;
 extern void controlBrakeModule() ;
-extern void void initTimer1() ;
+extern void initTimer1() ;

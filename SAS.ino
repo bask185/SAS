@@ -3,32 +3,40 @@
 #include "teachIn.h"
 #include "input.h"
 #include "output.h"
+#include "logic.h"
 #include "config.h"
 
-void setup() {
-    cli();
+void readIncFreq() { // ISR
+
+    int8_t currentTime = ( 128 - recvFreqT ) ; // recvFreqT is always decrementing.
+
+    rxFrequency =  constrain( currentTime, 0 , 100 ) ;
     
-    initIO();
-    initTimers();
-    attachInterrupt(digitalPinToInterrupt( Rx ), readIncFreq, CHANGE ) ;
+    recvFreqT = 128;
+}
 
-    initTimer1();
+void setup() {
+    cli() ;
+    
+    initIO() ;
+    initTimers() ;
+    attachInterrupt( digitalPinToInterrupt( Rx ), readIncFreq, CHANGE ) ;
 
-    sei();
+    initTimer1() ;
+
+    sei() ;
 
     signal.locked = 0 ;
     signal.section = available ;
     signal.type = combiSignal ;
     signal.state = green ;
     signal.wasLocked = 0 ;
-    signal.greenLedState = 1;
-    signal.yellowLedState = 0;
-    signal.redLedState = 0;
-}
-
-#define printNewState(x) case x: Serial.println(#x); break;
 
 }
+
+#define printNewState(x) case x: Serial.println(#x) ; break;
+
+
 /* General idea:
 
 *    With the SAS modules, one can make make either a dutch
@@ -80,17 +88,17 @@ when may a yellow showing combi signal become green?
 
 
 void loop() {
-    teachIn();
+    teachIn() ;
 
     // input
-    debounceInputs()
-    readLockSignal();
-    readDetector();
-    readSignals();
+    debounceInputs() ;
+    readLockSignal() ;
+    readDetector() ;
+    readSignals() ;
 
 
     // logic
-    computeLogic( &signal, &nextSignal ) ;    // takes input and calculate what all relevant variables should be.
+    computeLogic( ) ;    // takes input and calculate what all relevant variables should be.
 
     //  output
     sendSignals() ;            // send the signal to the adjacent module
@@ -100,14 +108,7 @@ void loop() {
 
 }
 
-void readIncFreq() { // ISR
 
-    int8_t currentTime = ( 128 - recvFreqT ) ; // recvFreqT is always decrementing.
-
-    rxFrequency =  constrain( currentTime, 0 , 100 ) ;
-    
-    recvFreqT = 128;
-}
 
 
 
@@ -130,67 +131,67 @@ void readIncFreq() { // ISR
 //     if ( b == 'd' ) printStuff() ;
 // }
 
-// #define printType(x) case x: Serial.println(#x); break
+// #define printType(x) case x: Serial.println(#x) ; break
 // void printStuff(){
 //     if( !printT ) { printT = 200;
 
-//         Serial.write( 12 );
+//         Serial.write( 12 ) ;
 //         //Serial.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n") ;
-//         Serial.print("signal type     : ");
+//         Serial.print("signal type     : ") ;
 //         switch(signal.type) {
-//             printType(mainSignal);
-//             printType(entrySignal);
-//             printType(germanPreSignal);
-//             printType(dutchPreSignal);
-//             printType(combiSignal);
+//             printType(mainSignal) ;
+//             printType(entrySignal) ;
+//             printType(germanPreSignal) ;
+//             printType(dutchPreSignal) ;
+//             printType(combiSignal) ;
 //         }
 
-//         Serial.print("buttons         : ");
+//         Serial.print("buttons         : ") ;
 //         switch(signal.buttons) {
-//             printType(green);
-//             printType(yellow);
-//             printType(red);
-//             printType(undefined);
+//             printType(green) ;
+//             printType(yellow) ;
+//             printType(red) ;
+//             printType(undefined) ;
 //         }
 
-//         Serial.print("send Freq       : "); Serial.println( signal.sendFreq );
-//         Serial.print("recv Freq       : "); Serial.println( signal.recvFreq );
-//         Serial.print("nextState       : ");
+//         Serial.print("send Freq       : ") ; Serial.println( signal.sendFreq ) ;
+//         Serial.print("recv Freq       : ") ; Serial.println( signal.recvFreq ) ;
+//         Serial.print("nextState       : ") ;
 //         switch( nextSignal.state ) {
-//             printType(green);
-//             printType(yellow);
-//             printType(red);
-//             printType(undefined);
+//             printType(green) ;
+//             printType(yellow) ;
+//             printType(red) ;
+//             printType(undefined) ;
 //         }
 
-//         Serial.print("locked          : ");
+//         Serial.print("locked          : ") ;
 //         switch(signal.locked) {
-//             printType(ON);
-//             printType(OFF);
+//             printType(ON) ;
+//             printType(OFF) ;
 //         }
 
-//         Serial.print("red Led State   : ");
+//         Serial.print("red Led State   : ") ;
 //         switch(signal.redLedState) {
-//             printType(1);
-//             printType(0);
+//             printType(1) ;
+//             printType(0) ;
 //         }
 
-//         Serial.print("yellow led State: ");
+//         Serial.print("yellow led State: ") ;
 //         switch(signal.yellowLedState) {
-//             printType(1);
-//             printType(0);
+//             printType(1) ;
+//             printType(0) ;
 //         }
 
-//         Serial.print("green Led State : ");
+//         Serial.print("green Led State : ") ;
 //         switch(signal.greenLedState) {
-//             printType(1);
-//             printType(0);
+//             printType(1) ;
+//             printType(0) ;
 //         }
 
-//         Serial.print("section         : ");
+//         Serial.print("section         : ") ;
 //         switch(signal.section) {
-//             printType(available);
-//             printType(occupied);
+//             printType(available) ;
+//             printType(occupied) ;
 //         }
 //     }
 // }

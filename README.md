@@ -1,19 +1,29 @@
-# SAS - Smart Arduino Signal
+# SAS & SAT - Smart Arduino Signal & Smart Arduino Turnout
 Een Smart Arduino Signal of SAS is een printplaat met onder anderen een arduinoboard die bedoeld is om niet alleen een sein aan te sturen maar ook om de modelbaan te beveiligen. De SAS is zodoende instaat om automatisch treinen te beinvloeden door middel van verschillende insteekbare modules. Er is een relaismodule om de baanspanning af te schakelen tbv de veiligheid. Er zijn drie type remmodules mogelijk om digitale treinen meet te beinvloeden: DC braking, Lenz ABC type 1 en Lenz ABC type 2. De SAS heeft verder aansluitingen om te communiceren met naburige seinen en om de SAS kan verkeerd spoor rijden.
 
 Met SAS zou elke gebruiker uit de voeten kunnen komen. Je kan SAS gebruiken puur voor het cosmetische effect van een sein. Een SAS kan een baan beveiligen door een sectie af te schakelen en SAS kan zowel digitale en analoge treinen automatisch beinvloeden. Of je nu analoog of digitaal rijdt, of je nu seinen wilt voor de sier, beveiliging of automatisme, dan is SAS handig voor jou.
 
 Een bloksysteem van seinen met een enkel bereden spoor is natuurlijk niet zo bijzonder ingewikkeld. Het ingewikkelde gedeelte dat zijn de dubbelbereden sporen, wisselstraten en stations. SAS is ook ontworpen om al deze problemen te tackelen. SAS kan stations beveiligen en SAS dubbel bereden enkelsporen beveiligen.
 
-## Basis werking
+Om deze problemen op te losse in er aanvullend voor SAS ook de Smart Arduino Turnout ontwikkeld of SAT. De SAT is een kleine vierkante PCB met ook een Arduino board. De SAT kan simpel gezegd de signalen van de seinen opslitsen in twee richtingen. Deze richting moet overeenkomen met een wisselstand. De vierkante PCBs kunnen in elkaar geklikt worden om zo een wisselstraat op te zetten. 
+
+De SAT kan werken icm met magneet wissels, maar omdat er toch al een arduino inzit, kan de SAT ook een servo motor aansturen. En aanvullend voor 2-rail rijders kan er ook een klein relaismoduletje bovenop de SAT geprikt worden om een puntstuk te polariseren. De servostanden zijn instelbaar.
+
+## Basiswerking SAS
 
 Als een SAS niet is verbonden met een naburig sein, dan werkt de SAS standaard met de bezetmelder en met een afval vertraging. Als een trein de bezetmelder verlaat, dan gaat er een tijd lopen. Als deze tijd verstreken is, kan de SAS op groen of op geel springen afhankelijk of de SAS is ingesteld als hoofdsein of combinatiesein. In het geval van een combinatiesein, zal SAS naar nog een keer dezelfde tijd ook een groen seinbeeld aannemen. Dit betekent dat je behalve voeding, slechts een bezetmelder hoeft aan te sluiten. 
 
 De SAS kan werken met zowel volledig gedecteerde stukken als met korte gedetecteerde stukken, hoewel het over het algemeen beter is om volledige detectie te gebruiken. Een SAS kan ook communiceren met naburige seinen. Als de verbinding gelegd is, zal de SAS niet meer op tijd werken maar op basis van signalen. Als de bezetmelder verbroken is en het volgende sein springt op rood dan zal de SAS weer op groen springen omdat hij begrijpt dat de trein op de bezetmelder van het volgende blok is gekomen.
 
+## Basiswerking SAT
+Het primaire doel van de SAT is om de 2 verschillende seinsignalen onder wissels door naar het goede spoor te leiden. SAT is dan ook volledig 2-polig. Om een spinnenweb van draden te voorkomen, kunnen de modules direct in elkaar worden gestoken. 
 
-## Voor wie is SAS bedoeld?
-SAS is bedoeld voor:
+Het aanvankelijk ontwerp bestond slechts uit een dubbelpolig relais met een beetje elektronic er om heen. Het daaropvolgende relais was een de-multiplexer. Maar omdat ik stiekem toch ook servo's wilde aansturen, was het toch makkelijker en voordeliger gebleken om een Arduino te gebruiken. 
+
+Omdat sommige 2-rail rijders graag hun puntstukken willen polariseren had ik ook bedacht dat het makkelijk zou zijn om een puntstuk relais direct op de SAS kunnen. Op dit relais kan het puntstuk, de + draad en de - draad worden aangesloten.
+
+## Voor wie is SAS/SAT bedoeld?
+SAS/SAT is bedoeld voor:
 - analoog rijders
 - twee rail rijders
 - drie rail rijders
@@ -54,16 +64,21 @@ Wat SAS kan:
 - stations beveiligen 
 - Het seinbeeld rijden op zicht tonen.
 
+---
+## Wat heeft SAT allemaal aan boord?
+- een Arduino board
+- 2 aansluitingen voor de stuursignalen.
+- 4x 8 polige connector om 2 sein signalen, 5V en gnd door te voeren.
+- servo motor aansluiting
+- 2 potmeters voor de servostanden
+- aansluiting voor een optionele puntstukrelaismodule
 
-## Q & A
-Q: Hoe ben je op dit idee gekomen?
-A: Ik dacht met BMB leden mee over een eventuele beveiliging van hun modulebaan. Zij kampten met verscheidene problemen; niet iedereen wilde zijn bak van een beveiliging voorzien, de opstelling van de baan is elke keer anders en moest allemaal maar stupid simple blijven. De blokbeveiliging wilde ik toen tackelen door een PCB te ontwerpen met een arduino board met 2 RJ45 aansluitingen om zo de communicatie tussen de modules op te zetten. Als er tussen 2 arduino uitgeruste modules een module zonder arduino zou liggen, dan zou men de bakken alsnog gemakkelijk kunnen verbinden met een ethernetkabel. Als een bak te laatse zou zijn, dan zou de bak verder kunnen beveiligen door of op tijd te schakelen of door zijn uitgaande signaal door te lussen naar zijn ingaande signaal. Dat zou dus betekenen dat de allerlaatste bak pas een 2e trein toe zou laten nadat de eerste trein via de keerlus weer terug is gekomen. Dit zou dan ook hun keerlusbeveiliging oplossen. Uiteindelijk waren er meer leden tegen dan voor en was het niks geworden.
+## Wat kan SAT allemaal?
+- 2 seinsignalen doorvoeren in beide richtingen
+- koppelen met andere SATs om samen een wisselstraat te vormen
+- een servomotor aansturen
+- een puntstuk relais aansturen
 
-Q: Heb je dit alleen gemaakt?
-A: Nee ik heb met Timo erg veel contact gehad omtrent het ontwerp. Timo heeft echt waardevolle tips en adviezen gegeven om niet alleen een goede werking maar ook om een goede gebruikerservaring te realiseren.
-
-Q: Is er eigenlijk iets wat SAS niet kan?
-A: Er is een ding wat een SAS niet kan. Een inrijsein kan groen of geel seinbeeld tonen afhankelijk wat de stand is van de wissels die er achter liggen. Een SAS zal simpwel groen tonen mits het geplande spoor niet bezet is of de wissels gebogen staan of niet.
 
 # De werking nader uitgelegd, hoe sluit je een SAS aan?
 
@@ -106,12 +121,38 @@ Zoals je ziet lijkt de beveiliging erg veel op dat van een dubbelspoor met als t
 
 ---
 ## Beveiliging van stations
-Aanvankelijk wilde ik nog een stukje maken voor het bovenstaande voorbeeld met 
-plaatjes
+text
+---
+## Aansluiten van SAS icm met SAT en wisselstraten.
+Een van de grootste uitdagingen van dit project was om stations en wisselstraten te voorzien van seinmodules en ze tot een bepaalde mate te beveiligen.
+![alt text](https://raw.githubusercontent.com/bask185/SAS/master/images/img3-1.png "1-1")
 
 ## Blokbeveiliging van een enkel sporig branchlijn met uni-directionele passeerstukken
 plaatjes
 
-## Beveiling van wisselstraten
+## De remmodules nader uitgelegd.
+voor diegene die hun baan of een paar delen van een hun baan willen automatiseren, is er de keuze om een van de drie types remmodules toe te passen. Zoals eerder vermeld, is er de keuze uit de Marklin type remmodule die werkt door de baanspanning gelijk te richten. Meeste type decoders begrijpen dit signaal. Een nadeel van deze module is dat je altijd een overgang sectie nodig heb om kortsluiting te voorkomen.
 
-## Beveiliging van stations
+Deze remmodule 4 a 5 verbindingen nodig met de rails. De stop sectie (elektrisch afgeschakelde sectie) is hierbij optioneel. De module heeft de baanspanning en baanmassa nodig. Verder moet je de overgangs- en de remsectie aansluiten.
+
+Lenz heeft een andere methode bedacht om digitale treinen automatisch te beinvloeden. Een Lenz BM1 of Lenz ABC module type 1 maakt een spanningsverval van ca 3.5V over de rechter rail. En de rechter rail is ten opzichte van een de machinist. Deze module heeft voordelen ten opzichte van de Marklin variant.
+- De modules werken flank gevoelig. Als een trein een geremde sectie van achter benadert, zal hij niet stoppen. 
+- De diodedrop methode is kortsluitproof. Er is geen behoeft aan een extra overhangssectie of stopsectie.
+
+Een nadeel is dat deze module niet geschikt is voor het marklin systeem om twee redenen. Marklin type decoders begrijpen het Lenz ABC (nog) niet en er is geen onderscheid tussen links en rechts vanwege de puko's
+
+Om de Bm1 type module aan te sluiten, is slechts de rechter de railspanning nodig
+
+De Lenz BM2 of Lenz ABC type 2 module is een verbeterde versie de type 1. Wat deze module meer kan dan zijn voorganger is treinen op halve snelheid laten rijden. Dit doen de modules door elke 2e puls te verlagen met 3.5V.
+
+De Lenz BM3 is eigenlijk een combinatie van de type 2 plus de mogelijkheid om een volledig bloksysteem te ontwerpen. Het is dus verder geen aparte module wat iets meer zou kunnen dan al het andere.
+
+## Q & A
+Q: Hoe ben je op dit idee gekomen?
+A: Ik dacht met BMB leden mee over een eventuele beveiliging van hun modulebaan. Zij kampten met verscheidene problemen; niet iedereen wilde zijn bak van een beveiliging voorzien, de opstelling van de baan is elke keer anders en alles moest allemaal maar stupid simple blijven. De blokbeveiliging wilde ik toen tackelen door een PCB te ontwerpen met een arduino board met 2 RJ45 aansluitingen om zo de communicatie tussen de modules op te zetten. Als er tussen 2 arduino uitgeruste modules een module zonder arduino zou liggen, dan zou men de bakken alsnog gemakkelijk kunnen verbinden met een ethernetkabel. Als een bak te laatse zou zijn, dan zou de bak verder kunnen beveiligen door of op tijd te schakelen of door zijn uitgaande signaal door te lussen naar zijn ingaande signaal. Dat zou dus betekenen dat de allerlaatste bak pas een 2e trein toe zou laten nadat de eerste trein via de keerlus weer terug is gekomen. Dit zou dan ook hun keerlusbeveiliging oplossen. Uiteindelijk waren er meer leden tegen dan voor en was het niks geworden.
+
+Q: Heb je dit alleen gemaakt?
+A: Nee ik heb met Timo erg veel contact gehad omtrent het ontwerp. Timo heeft echt waardevolle tips en adviezen gegeven om niet alleen een goede werking maar ook om een goede gebruikerservaring te realiseren. Ik heb wel zelf de schema's helemaal uitontwikkeld en getekend en ik heb de PCB's ontworpen en de programma's geschreven.
+
+Q: Is er eigenlijk iets wat SAS niet kan?
+A: Er is een ding wat een SAS niet kan. Een inrijsein kan groen of geel seinbeeld tonen afhankelijk wat de stand is van de wissels die er achter liggen. Een SAS zal simpwel groen tonen mits het geplande spoor niet bezet is of de wissels gebogen staan of niet.

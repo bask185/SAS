@@ -2,11 +2,11 @@
 #include "src/modules/debounceClass.h"
 
 
-extern Debounce detector( ) ;
-extern Debounce lockSignal( ) ;
-extern Debounce redButton( ) ;
-extern Debounce yellowButton( ) ;
-extern Debounce greenButton( ) ;
+extern Debounce detector(  ) ;
+extern Debounce lockSignal(  ) ;
+extern Debounce redButton(  ) ;
+extern Debounce yellowButton(  ) ;
+extern Debounce greenButton(  ) ;
 
 typedef struct {
 	uint8_t buttons ;
@@ -35,7 +35,7 @@ typedef struct {
 
 extern NextSignal nextSignal ;
 
-typedef Leds {
+typedef struct {
 	uint8_t state ;
 	uint8_t max ;
 	uint8_t min ;
@@ -75,3 +75,4 @@ const uint8_t redFreq = 30 ;
 
 extern uint8_t mode ;
 extern uint8_t previousState ;
+extern uint8_t rxFrequency ;

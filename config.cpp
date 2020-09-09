@@ -1,14 +1,16 @@
-#include "cnfig.h"
+#include "config.h"
 #include "src/basics/io.h"
 
 uint8_t	mode;
 uint8_t previousState = 255;
+uint8_t rxFrequency ;
 
 Signal signal ;
 NextSignal nextSignal ;
-Led redLed    = { :min = 0, :state = 0 } ;
-Led greenLed  = { :min = 0, :state = 1 } ;
-Led yellowLed = { :min = 0, :state = 0 } ;
+
+Led redLed    ;
+Led yellowLed ;
+Led greenLed  ;
 
 Debounce detector( detectorPin );
 Debounce lockSignal( lockPin );

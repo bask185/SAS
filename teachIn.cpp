@@ -2,7 +2,7 @@
 #include <Arduino.h>
 #include "teachIn.h"
 #include "config.h"
-#include "serial.h"
+// #include "serial.h"
 #include "src/basics/timers.h"
 #include <EEPROM.h>
 
