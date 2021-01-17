@@ -40,6 +40,7 @@ typedef struct {
 	uint8_t max ;
 	uint8_t min ;
 	uint8_t pwm ;
+	uint8_t pin ;
 } Led ;
 
 extern Led redLed, greenLed, yellowLed ;

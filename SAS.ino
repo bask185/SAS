@@ -22,7 +22,7 @@ void setup() {
     initTimers() ;
     attachInterrupt( digitalPinToInterrupt( Rx ), readIncFreq, CHANGE ) ;
 
-    initTimer1() ;
+    //initTimer1() ;
 
     sei() ;
 

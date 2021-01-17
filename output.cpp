@@ -224,18 +224,19 @@ void fadeLeds() {
 ISR(TIMER1_COMPA_vect) { // timer 1 ISR must run at 9kHz
     static byte dutyCycle = 0;
     static byte servoPulse = 0;
+    static byte counter = 0 ;
 
     if( servoPulse == 0 ) digitalWrite( servoPin, HIGH ) ;
 
     if( dutyCycle == 0 ) {
-        if( redLed.pwm    > 0 ) digitalWrite( redLed,    HIGH ) ; // change to port instructions when finished
-        if( yellowLed.pwm > 0 ) digitalWrite( yellowLed, HIGH ) ;
-        if( greenLed.pwm  > 0 ) digitalWrite( greenLed,  HIGH ) ;
+        if( redLed.pwm    > 0 ) digitalWrite( redLedPin,    HIGH ) ; // change to port instructions when finished
+        if( yellowLed.pwm > 0 ) digitalWrite( yellowLedPin, HIGH ) ;
+        if( greenLed.pwm  > 0 ) digitalWrite( greenLedPin,  HIGH ) ;
     }
 
-    if( dutyCycle ==    redLed.pwm )  digitalWrite( redLed,    LOW );
-    if( dutyCycle == yellowLed.pwm )  digitalWrite( yellowLed, LOW );
-    if( dutyCycle ==  greenLed.pwm )  digitalWrite( greenLed,  LOW );
+    if( dutyCycle ==    redLed.pwm )  digitalWrite( redLedPin,    LOW );
+    if( dutyCycle == yellowLed.pwm )  digitalWrite( yellowLedPin, LOW );
+    if( dutyCycle ==  greenLed.pwm )  digitalWrite( greenLedPin,  LOW );
 
     if( servoPulse == servoPos )     digitalWrite( servoPin,  LOW ) ;
 
@@ -244,8 +245,7 @@ ISR(TIMER1_COMPA_vect) { // timer 1 ISR must run at 9kHz
     
 }
 
-void initTimer1() {
-    extern void initTimers() {
+extern void initTimers() {
     TCCR1B = 0;// same for TCCR1B
     TCNT1  = 0;//initialize counter value to 0
     // set compare match register for 8khz increments
