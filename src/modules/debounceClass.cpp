@@ -8,41 +8,6 @@ Debounce::Debounce(unsigned char _pin) {
 	state = ON ;
 }
 
-
-
-// bool Debounce::fell(){
-// 	if( fallen == true ) {
-// 		fallen = false;
-
-// 		return true;
-// 	}
-// 	else {
-// 		return false;
-// 	}
-// }
-
-// bool Debounce::rose(){
-// 	if( rissen == true) {
-// 		rissen = false;
-
-// 		return true;
-// 	}
-// 	else {
-// 		return false;
-// 	}
-// }
-
-// bool Debounce::isHigh(){
-// 	if( state == ON ) return true;
-// 	else			  return false;
-// }
-
-// bool Debounce::isLow(){
-// 	if( state == OFF ) return true;
-// 	else			   return false;
-// }
-
-
 unsigned char Debounce::getState() {
 	byte retValue = state;
 

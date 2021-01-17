@@ -2,13 +2,13 @@ A0	dip0	INPUT_PULLUP
 A1	dip1	INPUT_PULLUP
 A2	dip2	INPUT_PULLUP
 A3	dip3	INPUT_PULLUP
-A5	detectorPin INPUT
+A5	detectorPin	INPUT
 A6	potPin	INPUT
 A7	configPin	INPUT
 0	slowSpeed	OUTPUT
-1	greenButton	INPUT_PULLUP
-3	yellowButton	INPUT_PULLUP
-4	redButton	INPUT_PULLUP
+1	greenButtonPin	INPUT_PULLUP
+3	yellowButtonPin	INPUT_PULLUP
+4	redButtonPin	INPUT_PULLUP
 5	relayPin	INPUT_PULLUP
 7	Rx	INPUT_PULLUP
 8	directionPin	INPUT_PULLUP

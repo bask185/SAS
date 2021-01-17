@@ -1,12 +1,11 @@
 #include <Arduino.h>
 #include "src/modules/debounceClass.h"
 
-
-extern Debounce detector(  ) ;
-extern Debounce lockSignal(  ) ;
-extern Debounce redButton(  ) ;
-extern Debounce yellowButton(  ) ;
-extern Debounce greenButton(  ) ;
+extern Debounce detector/*(  )*/ ;
+extern Debounce directionSignal/*(  )*/ ;
+extern Debounce redButton/*(  )*/ ;
+extern Debounce yellowButton/*(  )*/ ;
+extern Debounce greenButton/*(  )*/ ;
 
 typedef struct {
 	uint8_t buttons ;
@@ -77,3 +76,6 @@ const uint8_t redFreq = 30 ;
 extern uint8_t mode ;
 extern uint8_t previousState ;
 extern uint8_t rxFrequency ;
+extern uint8_t servoPos ;
+extern uint8_t redServoPos ;
+extern uint8_t greenServoPos ;

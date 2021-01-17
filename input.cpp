@@ -31,13 +31,13 @@ uint8_t fallTimeControl( ) {
 	static uint8_t prevTime = 0;
 	if( fallT != prevTime ) {
 		prevTime = fallT ;
-		Serial.println( fallT ) ;
+		//Serial.println( fallT ) ;
 	}
 
 	if( signal.detectorState == RISING ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
-		fallT = analogRead( potentiometer ) / 10 ;		// a time based signal must no longer last than 100 seconds tops.
+		fallT = analogRead( potPin ) / 10 ;		// a time based signal must no longer last than 100 seconds tops.
 		if( fallT <= 2 ) fallT = 0 ; 					// if pot is turned to full mininum, disable fall time control
-		Serial.print("fall time = ");Serial.println(fallT);
+		//Serial.print("fall time = ");//Serial.println(fallT);
 	}
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
@@ -45,7 +45,7 @@ uint8_t fallTimeControl( ) {
 
 		if( signal.type == combiSignal) {		// combi signal goes first to yellow before going to green
 			if( signal.state == red ) {
-				fallT = analogRead( potentiometer ) / 10 ;
+				fallT = analogRead( potPin ) / 10 ;
 				return yellow ;
 			}
 			else if ( signal.state == yellow || signal.state == driveOnSight ) { return green ; }
@@ -59,24 +59,27 @@ uint8_t fallTimeControl( ) {
 }
 
 
-
+// FUNCTION CONFIRMED TO WORK 17/01/21
 void debounceInputs() {
 	if( !debounceT ) {
-		debounceT = 200 ; // 200ms debounce time
+		debounceT = 100 ; //  debounce time in ms
 
 		// debounce inputs
-		locksignal.debounce() ;
+		directionSignal.debounce() ;
 		detector.debounce() ;
 		redButton.debounce() ;
 		greenButton.debounce() ;
 		yellowButton.debounce() ;
+
+		uint8_t state = detector.getState() ;
+		if( state == FALLING ) signal.section = occupied ;
 	}
 }
 
 
 
-void readLockSignal() {
-	signal.locked = locksignal.getState()  ;
+void readDirection() {
+	signal.locked = directionSignal.getState()  ;
 
 	if( signal.type == entrySignal ) { // in the event of an entry signal, the lockpin must be inverted
 		if(		 signal.locked ==  ON ) signal.locked == OFF ; // 
@@ -92,32 +95,31 @@ void readDetector() {
 }
 
 
-
 void readSignals() {
 	static uint8_t previousSignalState;
 
 	signal.recvFreq = rxFrequency;
 
 	signal.connected = 1; // set true
-	if (	 signal.recvFreq >  greenFreq - 3 && signal.recvFreq <  greenFreq + 3 ) { nextsignal.state =     green ; }
-	else if( signal.recvFreq > yellowFreq - 3 && signal.recvFreq < yellowFreq + 3 ) { nextsignal.state =    yellow ; }
-	else if( signal.recvFreq >    redFreq - 3 && signal.recvFreq <    redFreq + 3 ) { nextsignal.state =       red ; }
-	else {   signal.connected = 0;													    nextsignal.state = undefined ; } // no known frequency means not connected
+	if (	 signal.recvFreq >  greenFreq - 3 && signal.recvFreq <  greenFreq + 3 ) { nextSignal.state =     green ; }
+	else if( signal.recvFreq > yellowFreq - 3 && signal.recvFreq < yellowFreq + 3 ) { nextSignal.state =    yellow ; }
+	else if( signal.recvFreq >    redFreq - 3 && signal.recvFreq <    redFreq + 3 ) { nextSignal.state =       red ; }
+	else {   signal.connected = 0;													  nextSignal.state = undefined ; } // no known frequency means not connected
 
-	if( previousSignalState != nextsignal.state ) {
-		previousSignalState = nextsignal.state ;
+	if( previousSignalState != nextSignal.state ) {
+		previousSignalState = nextSignal.state ;
 
-		switch( nextsignal.state ) {	// set these flags
-			case red:    nextsignal.transitionedToRed	 = 1 ; Serial.println(" nextsignal.transitionedToRed"); break ;
-			case yellow: nextsignal.transitionedToYellow = 1 ; Serial.println(" nextsignal.transitionedToYellow"); break ;
-			case green:	 nextsignal.transitionedToGreen	 = 1 ; Serial.println(" nextsignal.transitionedToGreen");break ;
+		switch( nextSignal.state ) {	// set these flags
+			case red:    nextSignal.transitionedToRed	 = 1 ; //Serial.println(" nextSignal.transitionedToRed"); break ;
+			case yellow: nextSignal.transitionedToYellow = 1 ; //Serial.println(" nextSignal.transitionedToYellow"); break ;
+			case green:	 nextSignal.transitionedToGreen	 = 1 ; //Serial.println(" nextSignal.transitionedToGreen");break ;
 		}
 
 		switch( signal.type ) {
 		
 		/* DUTCH PRE SIGNAL KNOWS ONLY EXPECTING GREEN OR RED */
 		case dutchPreSignal: 
-			switch( nextsignal.state ) {
+			switch( nextSignal.state ) {
 				default:	 return undefined ; 	// need alteringex
 				case green:	 return expectGreen ; 
 				case red:	 return expectRed ; 
@@ -125,7 +127,7 @@ void readSignals() {
 
 		/* GERMAN PRE SIGNAL KNOWS EXPECTING GREEN, YELLOW OR RED */
 		case germanPreSignal:
-			switch( nextsignal.state ) {
+			switch( nextSignal.state ) {
 				default:	 return undefined ;
 				case green:  return expectGreen ;
 				case yellow: return expectYellow ;
@@ -133,13 +135,13 @@ void readSignals() {
 			}
 
 		case mainSignal:	// if a main signal receives a signal that the following state is red, it's own state becomes green
-			switch( nextsignal.state ) {
+			switch( nextSignal.state ) {
 				default:	 return undefined ; // ignore green and yellow states
 				case red:	 return green ;
 			}
 
 		case combiSignal:
-			switch( nextsignal.state ) {
+			switch( nextSignal.state ) {
 				default:	 return undefined ;
 				case green:
 				case yellow: return green ;

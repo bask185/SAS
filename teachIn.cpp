@@ -2,7 +2,6 @@
 #include <Arduino.h>
 #include "teachIn.h"
 #include "config.h"
-// #include "serial.h"
 #include "src/basics/timers.h"
 #include <EEPROM.h>
 
@@ -17,20 +16,16 @@ enum EEaddresses {
 }; 
 
 
-Servo armServo;
-Debounce detector( detectorPin ) ;
-Debounce lockSignal( lockPin ) ;
-
 // MACROS
 #define stateFunction(x) static bool x##F(void)
 #define entryState if(runOnce) 
 #define onState runOnce = false; if(!runOnce)
 #define exitState if(!exitFlag) return false; else
-#define State(x) break; case x: if(runOnce) Serial.println(#x) ; if(x##F())
+#define State(x) break; case x: /*if(runOnce) Serial.println(#x) ;*/ if(x##F())
 #define STATE_MACHINE_BEGIN if(!enabled) { \
 	if(!teachInT) enabled = true; } \
 else switch(state){\
-	default: Serial.println("unknown state executed, state is idle now") ; state = teachInIDLE; case teachInIDLE: return true;
+	default: /*Serial.println("unknown state executed, state is idle now") ;*/ state = teachInIDLE; case teachInIDLE: return true;
 #define STATE_MACHINE_END break;}return false;
 
 
@@ -48,8 +43,7 @@ extern void teachInInit(void) {
 
 	state = beginState; 
 
-	armServo.write( 90 ) ;
-	armServo.attach( servoPin ) ; 
+	servoPos = 90 ;
 
 	uint8_t firstEntry = EEPROM.read( INIT_ADDR ) ;
 	if( firstEntry != 0xCC ) { // is signal is already started once, retreive values
@@ -60,7 +54,7 @@ extern void teachInInit(void) {
 		EEPROM.write( PWM_RED_ADDR, 100) ;
 
 		EEPROM.write( INIT_ADDR, 0xCC) ;
-		Serial.println("FIRST TIME BOOTING, DEFAULT SETTINGS ARE LOADED") ;
+		//Serial.println("FIRST TIME BOOTING, DEFAULT SETTINGS ARE LOADED") ;
 	}
 
 	greenServoPos =	EEPROM.read( GREEN_SERVO_POS ) ;
@@ -69,19 +63,19 @@ extern void teachInInit(void) {
 	yellowLed.max =	EEPROM.read( PWM_YELLOW_ADDR ) ;
 	redLed.max    =	EEPROM.read( PWM_RED_ADDR ) ;
 
-	signalType = 
+	signal.type = 
 	  ( digitalRead( dip0 ) << 3 )
 	| ( digitalRead( dip1 ) << 2 )
 	| ( digitalRead( dip2 ) << 1 )
 	| ( digitalRead( dip3 ) << 0 ) ;
 
-	switch( signalType ) {
-		default:				Serial.println("unknown type signal selected, correctly set the dipswitches nad reboot") ; break;
-		case dutchPreSignal:	Serial.println("dutchPreSignal selected") ; 	break;
-		case germanPreSignal:	Serial.println("germanPreSignal selected") ; 	break;
-		case mainSignal:		Serial.println("mainSignal selected") ; 		break;
-		case combiSignal:		Serial.println("combiSignal selected") ; 		break;
-	}
+	// switch( signal.type ) {
+	// 	default:				//Serial.println("unknown type signal selected, correctly set the dipswitches nad reboot") ; break;
+	// 	case dutchPreSignal:	//Serial.println("dutchPreSignal selected") ; 	break;
+	// 	case germanPreSignal:	//Serial.println("germanPreSignal selected") ; 	break;
+	// 	case mainSignal:		//Serial.println("mainSignal selected") ; 		break;
+	// 	case combiSignal:		//Serial.println("combiSignal selected") ; 		break;
+	// }
 }
 
 extern byte teachInGetState(void) { return state;}
@@ -101,9 +95,7 @@ stateFunction( waitButtonPress ) { // just wait on the first button press
 		
 	}
 	onState {
-		byte buttonState = configButton.readInput() ;
-
-		if( buttonState == RISING ) exitFlag = true;
+		if( analogRead( potPin ) ) exitFlag = true ;
 	}
 	exitState {
 
@@ -112,80 +104,77 @@ stateFunction( waitButtonPress ) { // just wait on the first button press
 }
 
 stateFunction(adjustGreenBrightness) {
-	uint16_t val;
-
-	entryState {
-		digitalWrite( greenLed, HIGH ) ;
-		teachInT = 250 ;  // 2,5 second for on time led
-
-		timeOutT = 250 ;   // 25 seconds timeout should suffice
-	}
-	onState {
-		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potentiometer ) ;
-			val = map( val, 0, 1023, 0, 100 ) ;
-			greenLed.pwm = val ;
-		}
-
-		byte buttonState = 1;//configButton.readInput() ;
-		if( buttonState == RISING || timeOutT == 0 ) exitFlag = true;
-	}
-	exitState {
-		digitalWrite( greenLed, LOW ) ;
-		EEPROM.write( PWM_GREEN_ADDR, val ) ;
-		return true ;
-	}
-}
-
-stateFunction(adjustYellowBrightness) {
 	uint16_t val ;
 
 	entryState {
-		digitalWrite( yellowLed, HIGH ) ;
+		greenLed.pwm = 255 ;
 		teachInT = 250 ; // 2,5 second for on time led
 
 		timeOutT = 250 ; // 25 seconds timeout should suffice
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potentiometer ) ;
-			val = map( val, 0, 1023, 0, 100 ) ;
-			analogWrite( pwmPin, val ) ;
+			val = analogRead( potPin ) ;
+			if( val < 10 || timeOutT == 0 ) exitFlag = true;
+			else {
+				val = map( val, 0, 1023, 0, 255 ) ;
+				greenLed.pwm = val ;
+			}
 		}
-
-		byte buttonState = 1;//configButton.readInput() ;
-		if( buttonState == RISING || timeOutT == 0 ) exitFlag = true;
 	}
 	exitState {
-		digitalWrite( yellowLed, LOW ) ;
-		yellowPwm = val;
+		greenLed.pwm = 0 ;
+		EEPROM.write( PWM_GREEN_ADDR, val ) ;
+		return true;
+	}
+}
+stateFunction(adjustYellowBrightness) {
+	uint16_t val ;
+
+	entryState {
+		yellowLed.pwm = 255 ;
+		teachInT = 250 ; // 2,5 second for on time led
+
+		timeOutT = 250 ; // 25 seconds timeout should suffice
+	}
+	onState {
+		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
+			val = analogRead( potPin ) ;
+			if( val < 10 || timeOutT == 0 ) exitFlag = true;
+			else {
+				val = map( val, 0, 1023, 0, 255 ) ;
+				yellowLed.pwm = val ;
+			}
+		}
+	}
+	exitState {
+		yellowLed.pwm = 0 ;
 		EEPROM.write( PWM_YELLOW_ADDR, val ) ;
 		return true;
 	}
 }
 
 stateFunction(adjustRedBrightness) {
-	uint16_t val;
+	uint16_t val ;
 
 	entryState {
-		digitalWrite( redLed, HIGH ) ;
-		teachInT = 250; ; // 2,5 second for on time led
+		redLed.pwm = 255 ;
+		teachInT = 250 ; // 2,5 second for on time led
 
-		timeOutT = 250; // 25 seconds timeout should suffice
+		timeOutT = 250 ; // 25 seconds timeout should suffice
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potentiometer ) ;
-			val = map( val, 0, 1023, 0, 100 ) ;
-			analogWrite( pwmPin, val ) ;
+			val = analogRead( potPin ) ;
+			if( val < 10 || timeOutT == 0 ) exitFlag = true;
+			else {
+				val = map( val, 0, 1023, 0, 255 ) ;
+				redLed.pwm = val ;
+			}
 		}
-
-		byte buttonState = 1 ; // configButton.readInput() ;
-		if( buttonState == RISING || timeOutT == 0 ) exitFlag = true;
 	}
 	exitState {
-		digitalWrite( redLed, LOW ) ;
-		redPwm = val;
+		redLed.pwm = 0 ;
 		EEPROM.write( PWM_RED_ADDR, val ) ;
 		return true;
 	}
@@ -195,21 +184,19 @@ stateFunction(setServoRed) {
 	uint16_t val;
 
 	entryState { 
-		digitalWrite( redLed, HIGH ) ; // turn on red LED to indicate that the servo position is for red signal
 		timeOutT = 250; // 25 seconds timeout should suffice
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potentiometer ) ;
-			val = map( val, 0, 1023, 0, 180) ;
-			armServo.write( val ) ; 
+			val = analogRead( potPin ) ;
+			if( val < 10 || timeOutT == 0 ) exitFlag = true;
+			else {
+				val = map( val, 0, 1023, 0, 180) ;
+				servoPos = val ; ;
+			} 
 		}
-
-		byte buttonState = 1;//configButton.readInput() ;
-		if( buttonState == RISING || timeOutT == 0 ) exitFlag = true;
 	}
 	exitState {
-		digitalWrite( redLed, LOW ) ;
 		EEPROM.write( RED_SERVO_POS, val ) ;
 		return true;
 	}
@@ -219,21 +206,20 @@ stateFunction(setServoGreen) {
 	uint16_t val;
 
 	entryState {
-		digitalWrite( greenLed, HIGH ) ; // turn on green LED to indicate that the servo position is for green signal
 		timeOutT = 250; // 25 seconds timeout should suffice
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potentiometer ) ;
-			val = map( val, 0, 1023, 0, 180) ;
-			armServo.write( val ) ; 
-		}
+			val = analogRead( potPin ) ;
 
-		byte buttonState = 1;//configButton.readInput() ;
-		if( buttonState == RISING || timeOutT == 0 ) exitFlag = true;
+			if( val < 10 || timeOutT == 0 ) exitFlag = true;
+			else {
+				val = map( val, 0, 1023, 0, 180) ;
+				servoPos = val ; ;
+			} 
+		}
 	}
 	exitState {
-		digitalWrite( greenLed, LOW ) ;
 		EEPROM.write( GREEN_SERVO_POS, val ) ;
 		return true;
 	}
@@ -244,27 +230,27 @@ extern bool teachIn(void) {
 	STATE_MACHINE_BEGIN
 
 	State(waitButtonPress) {
-		nextState(adjustGreenBrightness, 0) ; }
+		nextState(adjustGreenBrightness, 100) ; }
 
 	State(adjustGreenBrightness) {
-		if( !timeOutT ) 					nextState(waitButtonPress, 0) ;
-		else if( signalType == mainSignal ) nextState(adjustRedBrightness, 0) ;
-		else								nextState(adjustYellowBrightness, 0) ; }
+		if( !timeOutT ) 					 nextState(waitButtonPress, 100) ;
+		else if( signal.type == mainSignal ) nextState(adjustRedBrightness, 100) ;
+		else								 nextState(adjustYellowBrightness, 100) ; }
 
 	State(adjustYellowBrightness) {
-		if( !timeOutT ) nextState(waitButtonPress, 0) ;
-		else 			nextState(adjustRedBrightness, 0) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 100) ;
+		else 			nextState(adjustRedBrightness, 100) ; }
 
 	State(adjustRedBrightness) {
-		if( !timeOutT ) nextState(waitButtonPress, 0) ;
-		else			nextState(setServoRed, 0) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 100) ;
+		else			nextState(setServoRed, 100) ; }
 
 	State(setServoRed) {
-		if( !timeOutT ) nextState(waitButtonPress, 0) ;
-		else			nextState(setServoGreen, 0) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 100) ;
+		else			nextState(setServoGreen, 100) ; }
 
 	State(setServoGreen) {
-		nextState(waitButtonPress, 0) ; }
+		nextState(waitButtonPress, 100) ; }
 
 	STATE_MACHINE_END
 }

@@ -20,6 +20,7 @@ void setup() {
     
     initIO() ;
     initTimers() ;
+    //initTimer1() ;
     attachInterrupt( digitalPinToInterrupt( Rx ), readIncFreq, CHANGE ) ;
 
     //initTimer1() ;
@@ -27,14 +28,17 @@ void setup() {
     sei() ;
 
     signal.locked = 0 ;
-    signal.section = available ;
+    signal.section = available ; // INPUT DIPSWITCHES NEEDED HERE
     signal.type = combiSignal ;
     signal.state = green ;
     signal.wasLocked = 0 ;
+    greenLed.state = 1;
+    yellowLed.state = 0;
+    redLed.state = 0;
 
 }
 
-#define printNewState(x) case x: Serial.println(#x) ; break;
+#define printNewState(x) case x: //Serial.println(#x) ; break;
 
 
 /* General idea:
@@ -88,17 +92,18 @@ when may a yellow showing combi signal become green?
 
 
 void loop() {
-    teachIn() ;
+    // teachIn() ;
 
     // input
     debounceInputs() ;
-    readLockSignal() ;
+    readDirection() ;
     readDetector() ;
     readSignals() ;
 
 
     // logic
     computeLogic( ) ;    // takes input and calculate what all relevant variables should be.
+    setLedStates( ) ;
 
     //  output
     sendSignals() ;            // send the signal to the adjacent module
@@ -120,9 +125,9 @@ void loop() {
 
 
     // debug stuff
-    // if( Serial.read () == 'd') printStuff()
-// if( Serial.available () ) {
-//     byte b = Serial.read() ;
+    // if( //Serial.read () == 'd') printStuff()
+// if( //Serial.available () ) {
+//     byte b = //Serial.read() ;
 
 //     // if ( b == 'g' ) signal.sendFreq = 10 ; used to test the signal transmitting
 //     // if ( b == 'y' ) signal.sendFreq = 20 ;
@@ -131,13 +136,13 @@ void loop() {
 //     if ( b == 'd' ) printStuff() ;
 // }
 
-// #define printType(x) case x: Serial.println(#x) ; break
+// #define printType(x) case x: //Serial.println(#x) ; break
 // void printStuff(){
 //     if( !printT ) { printT = 200;
 
-//         Serial.write( 12 ) ;
-//         //Serial.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n") ;
-//         Serial.print("signal type     : ") ;
+//         //Serial.write( 12 ) ;
+//         ////Serial.println("\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n\r\n") ;
+//         //Serial.print("signal type     : ") ;
 //         switch(signal.type) {
 //             printType(mainSignal) ;
 //             printType(entrySignal) ;
@@ -146,7 +151,7 @@ void loop() {
 //             printType(combiSignal) ;
 //         }
 
-//         Serial.print("buttons         : ") ;
+//         //Serial.print("buttons         : ") ;
 //         switch(signal.buttons) {
 //             printType(green) ;
 //             printType(yellow) ;
@@ -154,9 +159,9 @@ void loop() {
 //             printType(undefined) ;
 //         }
 
-//         Serial.print("send Freq       : ") ; Serial.println( signal.sendFreq ) ;
-//         Serial.print("recv Freq       : ") ; Serial.println( signal.recvFreq ) ;
-//         Serial.print("nextState       : ") ;
+//         //Serial.print("send Freq       : ") ; //Serial.println( signal.sendFreq ) ;
+//         //Serial.print("recv Freq       : ") ; //Serial.println( signal.recvFreq ) ;
+//         //Serial.print("nextState       : ") ;
 //         switch( nextSignal.state ) {
 //             printType(green) ;
 //             printType(yellow) ;
@@ -164,31 +169,31 @@ void loop() {
 //             printType(undefined) ;
 //         }
 
-//         Serial.print("locked          : ") ;
+//         //Serial.print("locked          : ") ;
 //         switch(signal.locked) {
 //             printType(ON) ;
 //             printType(OFF) ;
 //         }
 
-//         Serial.print("red Led State   : ") ;
+//         //Serial.print("red Led State   : ") ;
 //         switch(signal.redLedState) {
 //             printType(1) ;
 //             printType(0) ;
 //         }
 
-//         Serial.print("yellow led State: ") ;
+//         //Serial.print("yellow led State: ") ;
 //         switch(signal.yellowLedState) {
 //             printType(1) ;
 //             printType(0) ;
 //         }
 
-//         Serial.print("green Led State : ") ;
+//         //Serial.print("green Led State : ") ;
 //         switch(signal.greenLedState) {
 //             printType(1) ;
 //             printType(0) ;
 //         }
 
-//         Serial.print("section         : ") ;
+//         //Serial.print("section         : ") ;
 //         switch(signal.section) {
 //             printType(available) ;
 //             printType(occupied) ;

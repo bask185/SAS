@@ -13,10 +13,6 @@
 class Debounce {
 public:
 	Debounce(unsigned char _pin);
-	// bool fell() ;
-	// bool rose() ;
-	// bool isHigh() ;
-	// bool isLow() ;
 	unsigned char getState() ;
 	void debounce() ;
 	unsigned char hasRissen;

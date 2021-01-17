@@ -1,5 +1,3 @@
-#include <Servo.h>
-
 #include "src/basics/io.h"
 
 enum teachInStates {

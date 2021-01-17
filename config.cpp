@@ -3,7 +3,11 @@
 
 uint8_t	mode;
 uint8_t previousState = 255;
-uint8_t rxFrequency ;
+uint8_t rxFrequency = 0 ;
+
+uint8_t servoPos ;
+uint8_t redSeervoPos ;
+uint8_t greenServoPos ;
 
 Signal signal ;
 NextSignal nextSignal ;
@@ -13,7 +17,7 @@ Led yellowLed ;
 Led greenLed  ;
 
 Debounce detector( detectorPin );
-Debounce lockSignal( lockPin );
-Debounce redButton( redPin );
-Debounce yellowButton( yellowPin );
-Debounce greenButton( greenPin );
+Debounce directionSignal( directionPin );
+Debounce redButton( redButtonPin );
+Debounce yellowButton( yellowButtonPin );
+Debounce greenButton( greenButtonPin );

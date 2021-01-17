@@ -12,75 +12,7 @@
 const int pwmMin = 0;
 const int pwmMax = 255;
 uint8_t pwm = 0;
-void fadeLeds( Signal *signal ) {
-    static uint8_t ledSelector ;
-
-    #define setLedStates(x,y,z) signal.greenLedState=x;signal.yellowLedState=y;signal.redLedState=z;                // set the states of the LEDS accordingly
-    switch( signal.state ) {// G  Y  R 
-    case green:             setLedStates( 1, 0, 0 ) ;    break ;
-    case yellow:         setLedStates( 0, 1, 0 ) ;    break ;
-    case red:               setLedStates( 0, 0, 1 ) ;    break ;
-    case expectGreen:    setLedStates( 1, 0, 0 ) ;    break ; // FOR PRE SIGNAL
-    case expectYellow:    setLedStates( 1, 1, 0 ) ;    break ;
-    case expectRed:        setLedStates( 0, 1, 0 ) ;    break ; // diode solution for german signal is yet to be made. Perhaps a 4th io pin?
-    case driveOnSight: 
-        if( !blinkT ) { 
-            blinkT = 150 ;
-            signal.redLedState = 0;
-            signal.greenLedState = 0;
-            signal.yellowLedState ^= 1 ;
-        } 
-        break ;        // 2 second interval toggle yellow LED
-    }
-
-    if( !fadeT ) { fadeT = 1 ; // every 1ms
-        if( pwm == pwmMax ) {    // if pwm is 0, the previous led has faded off and we can pick a new one
-            clrLeds() ;    // first we clear all colors and than set the active one.
-            //Serial.print("led state ");Serial.println(signal.state);
-            //Serial.print(signal.greenLedState) ;
-            //Serial.print(signal.yellowLedState) ;
-            //Serial.println(signal.redLedState) ;
-            // the german pre signal needs more than 1 active color
-            if(  signal.greenLedState == 1 ) { ledSelector = green ;     setLeds( HIGH,  LOW,  LOW ) ; }
-            if( signal.yellowLedState == 1 ) { ledSelector = yellow ;    setLeds(  LOW, HIGH,  LOW ) ; }
-            if(    signal.redLedState == 1 ) { ledSelector = red ;        setLeds(  LOW,  LOW, HIGH ) ; }
-
-            pwm --;
-        }
-        else {
-            switch( ledSelector ) {
-            default: ledSelector = green;
-
-            case green: 
-                if( signal.greenLedState == 0 && pwm < pwmMax ) pwm ++ ;
-                if( signal.greenLedState == 0 && pwm < pwmMax ) pwm ++ ;
-                if( signal.greenLedState == 1 && pwm > pwmMin ) pwm -- ;
-                if( signal.greenLedState == 1 && pwm > pwmMin ) pwm -- ;
-                break;
-
-            case yellow:
-                if( signal.yellowLedState == 0 && pwm < pwmMax ) pwm ++ ;
-                if( signal.yellowLedState == 0 && pwm < pwmMax ) pwm ++ ;
-                if( signal.yellowLedState == 1 && pwm > pwmMin ) pwm -- ;
-                if( signal.yellowLedState == 1 && pwm > pwmMin ) pwm -- ;
-                break;
-
-            case red:
-                if( signal.redLedState == 0 && pwm < pwmMax ) pwm ++ ;
-                if( signal.redLedState == 0 && pwm < pwmMax ) pwm ++ ;
-                if( signal.redLedState == 1 && pwm > pwmMin ) pwm -- ;
-                if( signal.redLedState == 1 && pwm > pwmMin ) pwm -- ;
-                break ;
-            }
-            //if( pwm != 0 && pwm != pwmMax ) Serial.println(pwm);
-            analogWrite( pwmPin, pwm ) ;
-        }
-    }
-}
-
-
-
-        
+       
 
 // minature state-machine to controll the servo movement including mass innertia
 enum servoStates {
@@ -96,7 +28,6 @@ enum servoStates {
 const int servoPosMax = 135 ;
 const int servoPosMin = 45 ;
 const int massInertiaSteps = 9 ;
-uint8_t servoPos;
 
 void servoControl( ) {
     static uint8_t servoState = up ;
@@ -153,14 +84,13 @@ void servoControl( ) {
             }
             break ; 
         }
-        motor.write( servoPos ) ;
     }
 }
 
 
 // 20Hz  -> 50ms
 // 100Hz -> 10ms
-void sendSignals( Signal *signal ) {
+void sendSignals( ) {
 
     static uint8_t state = 0, counter = 0;
 
@@ -186,7 +116,7 @@ void sendSignals( Signal *signal ) {
     }
 }
 
-void controlBrakeModule( Signal *signal ) {    // it may be that for analog trains something specials is needed
+void controlBrakeModule( ) {    // it may be that for analog trains something specials is needed
 
     if( signal.locked == 1 ) {                // a locked signal may be passed from behind
         digitalWrite( relayPin, LOW ) ;
@@ -213,9 +143,16 @@ void fadeLeds() {
     if( ( yellowLed.state == 1 ) && ( yellowLed.pwm < yellowLed.max ) ) yellowLed.pwm ++ ;
     if( (    redLed.state == 1 ) && (    redLed.pwm <    redLed.max ) )    redLed.pwm ++ ;
 
-    if( (  greenLed.state == 1 ) && (  greenLed.pwm >  greenLed.min ) )  greenLed.pwm -- ;
-    if( ( yellowLed.state == 1 ) && ( yellowLed.pwm > yellowLed.min ) ) yellowLed.pwm -- ;
-    if( (    redLed.state == 1 ) && (    redLed.pwm >    redLed.min ) )    redLed.pwm -- ;
+    if( (  greenLed.state == 0 ) && (  greenLed.pwm >  greenLed.min ) )  greenLed.pwm -- ;
+    if( ( yellowLed.state == 0 ) && ( yellowLed.pwm > yellowLed.min ) ) yellowLed.pwm -- ;
+    if( (    redLed.state == 0 ) && (    redLed.pwm >    redLed.min ) )    redLed.pwm -- ;
+
+    if( greenLed.state )    digitalWrite( greenLedPin, HIGH ) ;
+    else                    digitalWrite( greenLedPin, LOW ) ;
+    if( yellowLed.state )   digitalWrite( yellowLedPin, HIGH ) ;
+    else                    digitalWrite( yellowLedPin, LOW ) ;
+    if( redLed.state )      digitalWrite( redLedPin, HIGH ) ;
+    else                    digitalWrite( redLedPin, LOW ) ;
 }
 
 
@@ -245,7 +182,7 @@ ISR(TIMER1_COMPA_vect) { // timer 1 ISR must run at 9kHz
     
 }
 
-extern void initTimers() {
+extern void initTimer1() {
     TCCR1B = 0;// same for TCCR1B
     TCNT1  = 0;//initialize counter value to 0
     // set compare match register for 8khz increments
@@ -258,4 +195,8 @@ extern void initTimers() {
     TCCR1B &= ~(1 << CS12); 
     // enable timer compare interrupt
     TIMSK1 |= (1 << OCIE1A); 
+
+    greenLed.pwm = 255 ;
+    yellowLed.pwm = 0 ;
+    redLed.pwm = 0 ;
 }
