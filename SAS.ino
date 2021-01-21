@@ -36,6 +36,9 @@ void setup() {
     yellowLed.state = 0;
     redLed.state = 0;
 
+    Serial.begin(115200);
+    Serial.println("BOOTING SAS V1.0") ;
+
 }
 
 #define printNewState(x) case x: //Serial.println(#x) ; break;

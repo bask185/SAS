@@ -112,22 +112,28 @@
 // }
 #define setStates(x,y,z) greenLed.state = x ; yellowLed.state = y ; redLed.state = z ;
 
+/*** this function ensures the fade led function can do it's job ***/
 void setLedStates( ) {
 	switch( signal.state ) {
 		case green:		setStates(1,0,0); break;
 		case yellow:	setStates(0,1,0); break;
 		case red:		setStates(0,0,1); break;
 	}
+	if( signal.state == driveOnSight ) 
+	{
+		setStates(1,1,1);
+	}
 }
 
 uint8_t checkNextSignal( ) {
 	if( nextSignal.transitionedToYellow  )
 	{
-		nextSignal.transitionedToYellow = 0 ;
+		nextSignal.transitionedToYellow = 0 ; 
 		return green ;
 	}
 	if( nextSignal.transitionedToRed )
 	{
+		nextSignal.transitionedToRed = 0 ;
 		if( signal.type == mainSignal  ) return green ; //Serial.println("prev signal became red, I as main signal became green"); }
 		if( signal.type == combiSignal ) return yellow; //Serial.println("prev signal became red, I as combi signal became yellow"); }
 	}
@@ -155,7 +161,7 @@ void computeLogic( ) {
 			}
 			return ;
 		}
-		else 
+		else // yellow or red
 		{ 
 			signal.override = 1 ; 
 			signal.state = newButtonState ; // yellow or red
@@ -168,6 +174,7 @@ void computeLogic( ) {
 	// IS SIGNAL OVERRIDDEN BY BUTTONS?
 	if( signal.override ) return ; 
 	
+	return ;
 	// IS TRACK OCCUPIED?
 	if( signal.section == occupied ) {
 		signal.state = red ;

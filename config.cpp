@@ -1,6 +1,13 @@
 #include "config.h"
 #include "src/basics/io.h"
 
+
+void debug( String txt ) {
+	#ifdef DEBUG
+	Serial.println(txt);
+	#endif
+}
+
 uint8_t	mode;
 uint8_t previousState = 255;
 uint8_t rxFrequency = 0 ;

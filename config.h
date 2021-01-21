@@ -1,5 +1,9 @@
+#define DEBUG
+
 #include <Arduino.h>
 #include "src/modules/debounceClass.h"
+
+extern void debug( String ) ;
 
 extern Debounce detector/*(  )*/ ;
 extern Debounce directionSignal/*(  )*/ ;

@@ -10,13 +10,13 @@ uint8_t processButtons( ) {
 
 		if( signal.section == occupied 
 		&&  signal.type != mainSignal ) return driveOnSight ; 
-		else							 return green ; 
+		else							return green ; 
 	}
 
 	if( yellowButton.getState () == FALLING ) {
 		if( signal.section == occupied 
 		&&  signal.type != mainSignal ) return driveOnSight ;
-		else							 return yellow ;
+		else							return yellow ;
 	}
 
 	if( redButton.getState () == FALLING ) {
@@ -71,8 +71,8 @@ void debounceInputs() {
 		greenButton.debounce() ;
 		yellowButton.debounce() ;
 
-		uint8_t state = detector.getState() ;
-		if( state == FALLING ) signal.section = occupied ;
+		//uint8_t state = detector.getState() ;
+		//if( state == FALLING ) signal.section = occupied ;
 	}
 }
 
