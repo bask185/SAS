@@ -124,19 +124,63 @@ void setLedStates( ) {
 		setStates(1,1,1);
 	}
 }
-
+/*******************************
+This function checks changes of adjacent signal, and act accordingly
+***********************************/
 uint8_t checkNextSignal( ) {
+	
+	switch( signal.type ) {
+		case mainSignal:
+		if( nextSignal.transitionedToRed ) {
+			nextSignal.transitionedToRed = 0 ;
+			return green ;
+		}
+		if( nextSignal.transitionedToYellow ) {
+			nextSignal.transitionedToYellow = 0 ;
+			return green ;
+		}
+		break ;
+		
+		case combiSignal:
+		if( nextSignal.transitionedToRed ) {
+			nextSignal.transitionedToRed = 0 ;
+			return yellow ;
+		}
+		if( nextSignal.transitionedToYellow ) {
+			nextSignal.transitionedToYellow = 0 ;
+			return green ;
+		}
+		if( nextSignal.transitionedToGreen) { // SHOULD NEVER OCCUR
+			nextSignal.transitionedToGreen = 0 ;
+			return green ;
+		}
+		break ;
+		
+		
+		case preSignal:
+		if( nextSignal.transitionedToRed ) {
+			nextSignal.transitionedToRed = 0 ;
+			return red ;
+		}
+		if( nextSignal.transitionedToGreen) {
+			nextSignal.transitionedToGreen = 0 ;
+			return red ;
+		}
+		break;
+	
 	if( nextSignal.transitionedToYellow  )
 	{
-		nextSignal.transitionedToYellow = 0 ; 
+		nextSignal.transitionedToYellow = 0 ; // clear flag for re-use
 		return green ;
 	}
 	if( nextSignal.transitionedToRed )
 	{
-		nextSignal.transitionedToRed = 0 ;
+		nextSignal.transitionedToRed = 0 ;		// clear flag for re-use
 		if( signal.type == mainSignal  ) return green ; //Serial.println("prev signal became red, I as main signal became green"); }
 		if( signal.type == combiSignal ) return yellow; //Serial.println("prev signal became red, I as combi signal became yellow"); }
 	}
+	if( nextSignal.transitionedToRed )
+	{
 }
 
 
@@ -171,17 +215,16 @@ void computeLogic( ) {
 	}
 	// NO BUTTONS ARE PRESSED
 
-	// IS SIGNAL OVERRIDDEN BY BUTTONS?
+	// IF SIGNAL IS OVERRIDDEN BY BUTTONS, return
 	if( signal.override ) return ; 
 	
-	return ;
 	// IS TRACK OCCUPIED?
-	if( signal.section == occupied ) {
-		signal.state = red ;
+	if( detectorState == FALLING ) {	// TRAIN DETECTED
+		signal.state = red ;			// STATE IS RED
 		return ;
 	}
 
-	// NOT CONNECTED TO ADJACENT SIGNAL
+	// Not connected to adjacent signal, means that we will be using time to handle the signal's state
 	if( signal.connected == false )
 	{
 		uint8_t newState = fallTimeControl() ; // signal handled on time base

@@ -47,7 +47,12 @@ typedef struct {
 } Led ;
 
 extern Led redLed, greenLed, yellowLed ;
-	
+
+extern uint8_t greenButtonState ;
+extern uint8_t redButtonState ;
+extern uint8_t yellowButtonState ;
+extern uint8_t directionSignalState ;
+extern uint8_t detectorState ;
 
 enum signalTypes {
 	mainSignal,

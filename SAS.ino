@@ -99,9 +99,10 @@ void loop() {
 
     // input
     debounceInputs() ;
-    readDirection() ;
-    readDetector() ;
-    readSignals() ;
+    // readDirection() ; no longer needed
+    // readDetector() ; done in debounve inputs
+    readSignals() ; // needs altering, this function returns values which are unused
+    
 
 
     // logic

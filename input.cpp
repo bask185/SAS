@@ -3,7 +3,11 @@
 #include "src/basics/io.h"
 #include "src/basics/timers.h"
 #include "src/modules/debounceClass.h"
-
+/*****************************
+Monitors state of the buttons, and takes type of signal and occupied status in acount, returns new
+signal state
+If there is no change in buttons, function returns 'undefined' which is 0
+****************************/
 uint8_t processButtons( ) {
 
 	if( greenButton.getState () == FALLING ) {
@@ -62,7 +66,7 @@ uint8_t fallTimeControl( ) {
 // FUNCTION CONFIRMED TO WORK 17/01/21
 void debounceInputs() {
 	if( !debounceT ) {
-		debounceT = 100 ; //  debounce time in ms
+		debounceT = 50 ; //  debounce time in ms
 
 		// debounce inputs
 		directionSignal.debounce() ;
@@ -71,28 +75,31 @@ void debounceInputs() {
 		greenButton.debounce() ;
 		yellowButton.debounce() ;
 
-		//uint8_t state = detector.getState() ;
-		//if( state == FALLING ) signal.section = occupied ;
+		// stuff states in these variables for the remainder of the program's cycle
+		uint8_t state = directionSignal.getState() ;
+		if( state == OFF )	signal.locked = 1 ;
+		else 				signal.locked = 0 ;
+		
+		detectorState = detector.getState() ;
+		yellowButtonState = yellowButton.getState() ;
+		redButtonState = redButton.getState() ;
+		greenButtonState = green.getButtonState() ;		
 	}
 }
 
 
 
 void readDirection() {
-	signal.locked = directionSignal.getState()  ;
+	//signal.locked = directionSignal.getState()  ;
 
-	if( signal.type == entrySignal ) { // in the event of an entry signal, the lockpin must be inverted
-		if(		 signal.locked ==  ON ) signal.locked == OFF ; // 
-		else if( signal.locked == OFF ) signal.locked ==  ON ;
-	}
+	// if( signal.type == entrySignal ) { // in the event of an entry signal, the lockpin must be inverted
+	// 	if(		 signal.locked ==  ON ) signal.locked = OFF ; // 
+	// 	else if( signal.locked == OFF ) signal.locked =  ON ;
+	// }
 }
 
 
 
-
-void readDetector() {
-	signal.detectorState = detector.getState() ;
-}
 
 
 void readSignals() {
