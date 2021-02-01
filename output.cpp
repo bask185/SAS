@@ -118,17 +118,17 @@ void sendSignals( ) {
 
 void controlBrakeModule( ) {    // it may be that for analog trains something specials is needed
 
-    if( signal.locked == 1 ) {                // a locked signal may be passed from behind
+    if( signal.locked == 1 /*&& bypass == 1*/ ) {      // If direction is opposite and signal may be bypassed from behind
         digitalWrite( relayPin, LOW ) ;
         digitalWrite( slowSpeed, LOW );
     }
     else if( signal. state == red ) {
         digitalWrite( relayPin, HIGH ) ;
-        digitalWrite( relayPin, LOW ) ;
+        digitalWrite( slowSpeed, LOW ) ;
     }
     else if( signal.state == yellow ) {    // yellow signal must also set slow speed signal. This may be depended on module type.
-        digitalWrite( slowSpeed, HIGH );
         digitalWrite( relayPin, HIGH ) ;
+        digitalWrite( slowSpeed, HIGH );
     } 
     else {
         digitalWrite( slowSpeed, LOW );
@@ -147,56 +147,49 @@ void fadeLeds() {
     if( ( yellowLed.state == 0 ) && ( yellowLed.pwm > yellowLed.min ) ) yellowLed.pwm -- ;
     if( (    redLed.state == 0 ) && (    redLed.pwm >    redLed.min ) )    redLed.pwm -- ;
 
-    if( greenLed.state )    digitalWrite( greenLedPin, HIGH ) ;
-    else                    digitalWrite( greenLedPin, LOW ) ;
-    if( yellowLed.state )   digitalWrite( yellowLedPin, HIGH ) ;
-    else                    digitalWrite( yellowLedPin, LOW ) ;
-    if( redLed.state )      digitalWrite( redLedPin, HIGH ) ;
-    else                    digitalWrite( redLedPin, LOW ) ;
+    //Serial.print(greenLed.pwm);Serial.print(" "); Serial.print(yellowLed.pwm);Serial.print(" ");Serial.println(redLed.pwm);
 }
 
 
 
-/* time 1 handles software pwm for all 3 leds and the servo motor */
 ISR(TIMER1_COMPA_vect) { // timer 1 ISR must run at 9kHz
     static byte dutyCycle = 0;
-    static byte servoPulse = 0;
-    static byte counter = 0 ;
 
-    if( servoPulse == 0 ) digitalWrite( servoPin, HIGH ) ;
+     //PORTB ^= (1<<5) ;
+    //static byte servoPulse = 0;
+
+    //if( servoPulse == 0 ) digitalWrite( servoPin, HIGH ) ;
 
     if( dutyCycle == 0 ) {
-        if( redLed.pwm    > 0 ) digitalWrite( redLedPin,    HIGH ) ; // change to port instructions when finished
-        if( yellowLed.pwm > 0 ) digitalWrite( yellowLedPin, HIGH ) ;
-        if( greenLed.pwm  > 0 ) digitalWrite( greenLedPin,  HIGH ) ;
+        if( redLed.pwm    > 0 ) PORTB |= (1<<2) ; // change to port instructions when finished
+        if( yellowLed.pwm > 0 ) PORTB |= (1<<3) ;
+        if( greenLed.pwm  > 0 ) PORTB |= (1<<4) ;
     }
 
-    if( dutyCycle ==    redLed.pwm )  digitalWrite( redLedPin,    LOW );
-    if( dutyCycle == yellowLed.pwm )  digitalWrite( yellowLedPin, LOW );
-    if( dutyCycle ==  greenLed.pwm )  digitalWrite( greenLedPin,  LOW );
 
-    if( servoPulse == servoPos )     digitalWrite( servoPin,  LOW ) ;
+    if( dutyCycle ==    redLed.pwm )  PORTB &= ~(1<<2) ;
+    if( dutyCycle == yellowLed.pwm )  PORTB &= ~(1<<3) ;
+    if( dutyCycle ==  greenLed.pwm )  PORTB &= ~(1<<4) ;
 
-    if( ++counter == 255 ) counter = 0 ;
-    if( ++servoPulse == 20000 ) servoPulse = 0 ; // 20
-    
+    //if( servoPulse == servoPos )     digitalWrite( servoPin,  LOW ) ;
+
+   
+
+    dutyCycle ++ ;
+    //if( ++servoPulse == 20000 ) servoPulse = 0 ; // 20
 }
 
 extern void initTimer1() {
+    TCCR1A = 0;// set entire TCCR1A register to 0
     TCCR1B = 0;// same for TCCR1B
     TCNT1  = 0;//initialize counter value to 0
-    // set compare match register for 8khz increments
-    OCR1A = 149;// = (16*10^6) / (1000*64) - 1 (must be <156)
+    // set compare match register for 1hz increments
+    OCR1A = 133;// = (16*10^6) / (1*1024) - 1 (must be <65536)
     // turn on CTC mode
-    TCCR1A |= (1 << WGM11);
-    // Set CS11and and CS10 bit for 64 prescaler
-    TCCR1B |=  (1 << CS10);
-    TCCR1B |=  (1 << CS11); 
-    TCCR1B &= ~(1 << CS12); 
+    TCCR1B |= (1 << WGM12);
+    // Set CS10 and CS12 bits for 1024 prescaler
+    TCCR1B |= (1 << CS11) ;
     // enable timer compare interrupt
-    TIMSK1 |= (1 << OCIE1A); 
+    TIMSK1 |= (1 << OCIE1A);
 
-    greenLed.pwm = 255 ;
-    yellowLed.pwm = 0 ;
-    redLed.pwm = 0 ;
 }

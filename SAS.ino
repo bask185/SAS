@@ -11,6 +11,7 @@ void readIncFreq() { // ISR
     int8_t currentTime = ( 128 - recvFreqT ) ; // recvFreqT is always decrementing.
 
     rxFrequency =  constrain( currentTime, 0 , 100 ) ;
+    PORTB ^= (1<<5);
     
     recvFreqT = 128;
 }
@@ -20,25 +21,21 @@ void setup() {
     
     initIO() ;
     initTimers() ;
-    //initTimer1() ;
+    initTimer1() ;
     attachInterrupt( digitalPinToInterrupt( Rx ), readIncFreq, CHANGE ) ;
-
-    //initTimer1() ;
-
     sei() ;
+
+    redLed.max = 255 ;
+    yellowLed.max  = 255 ;
+    greenLed.max  = 20 ;
 
     signal.locked = 0 ;
     signal.section = available ; // INPUT DIPSWITCHES NEEDED HERE
-    signal.type = combiSignal ;
+    signal.type = dutchPreSignal ;
     signal.state = green ;
     signal.wasLocked = 0 ;
-    greenLed.state = 1;
-    yellowLed.state = 0;
-    redLed.state = 0;
 
     Serial.begin(115200);
-    Serial.println("BOOTING SAS V1.0") ;
-
 }
 
 #define printNewState(x) case x: //Serial.println(#x) ; break;
@@ -99,8 +96,8 @@ void loop() {
 
     // input
     debounceInputs() ;
-    // readDirection() ; no longer needed
-    // readDetector() ; done in debounve inputs
+    readDirection() ;
+    readDetector() ;
     readSignals() ; // needs altering, this function returns values which are unused
     
 
@@ -111,8 +108,8 @@ void loop() {
 
     //  output
     sendSignals() ;            // send the signal to the adjacent module
-    fadeLeds() ;            // fade leds in and out to emulate glowblub effects, currently this takes 1/4 of a setting
-    servoControl() ;        // handle the arm's servo motor including mass inertia movement
+    repeat( &fadeT, 1, fadeLeds );            // fade leds in and out to emulate glowblub effects, currently this takes 1/4 of a setting
+    //servoControl() ;        // handle the arm's servo motor including mass inertia movement
     controlBrakeModule() ;    // handles the braking/shutoff  relay
 
 }

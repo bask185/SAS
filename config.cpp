@@ -19,7 +19,6 @@ uint8_t greenServoPos ;
 uint8_t greenButtonState ;
 uint8_t redButtonState ;
 uint8_t yellowButtonState ;
-uint8_t directionSignal ;
 uint8_t detectorState ;
 
 Signal signal ;

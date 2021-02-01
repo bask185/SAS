@@ -9,11 +9,11 @@ A7	configPin	INPUT
 1	greenButtonPin	INPUT_PULLUP
 3	yellowButtonPin	INPUT_PULLUP
 4	redButtonPin	INPUT_PULLUP
-5	relayPin	INPUT_PULLUP
+5	relayPin	OUTPUT
 7	Rx	INPUT_PULLUP
 8	directionPin	INPUT_PULLUP
 9	Tx	INPUT_PULLUP
-10	greenLedPin	OUTPUT
+12	greenLedPin	OUTPUT
 11	yellowLedPin	OUTPUT
-12	redLedPin	OUTPUT
+10	redLedPin	OUTPUT
 13	servoPin	OUTPUT
