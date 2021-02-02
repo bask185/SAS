@@ -7,6 +7,6 @@ recvFreqT	1
 fallT	1000
 fadeT	1
 blinkT	10
-servoT	1
+semaphoreControlT	1
 printT	10
 receiverT	1

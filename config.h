@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include "src/modules/debounceClass.h"
+#include <Servo.h>
 
 extern void debug( String ) ;
 
@@ -11,6 +12,8 @@ extern Debounce redButton ;
 extern Debounce yellowButton ;
 extern Debounce greenButton ;
 extern Debounce receiver ;
+
+extern Servo semaphore ;
 
 typedef struct {
 	uint8_t buttons ;
