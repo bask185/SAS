@@ -28,8 +28,9 @@ Led redLed    ;
 Led yellowLed ;
 Led greenLed  ;
 
-Debounce detector( detectorPin );
+Debounce detector( detectorPin );			// needs altering, for different debouncing
 Debounce directionSignal( directionPin );
 Debounce redButton( redButtonPin );
 Debounce yellowButton( yellowButtonPin );
 Debounce greenButton( greenButtonPin );
+Debounce receiver( Rx );

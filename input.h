@@ -3,6 +3,7 @@
 extern uint8_t processButtons( ) ;
 extern uint8_t fallTimeControl( ) ;
 extern void debounceInputs( ) ;
+extern void readIncFreq( ) ;
 extern void readDirection( ) ;
 extern void readDetector( ) ;
 extern void readSignals( ) ;

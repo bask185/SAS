@@ -6,15 +6,7 @@
 #include "logic.h"
 #include "config.h"
 
-void readIncFreq() { // ISR
 
-    int8_t currentTime = ( 128 - recvFreqT ) ; // recvFreqT is always decrementing.
-
-    rxFrequency =  constrain( currentTime, 0 , 100 ) ;
-    PORTB ^= (1<<5);
-    
-    recvFreqT = 128;
-}
 
 void setup() {
     cli() ;
@@ -22,7 +14,7 @@ void setup() {
     initIO() ;
     initTimers() ;
     initTimer1() ;
-    attachInterrupt( digitalPinToInterrupt( Rx ), readIncFreq, CHANGE ) ;
+    //attachInterrupt( digitalPinToInterrupt( Rx ), readIncFreq, CHANGE ) ; OBSOLETE, MOVED TO DIFFERENT IO AND IS NO LONGER AN INTERRUPT
     sei() ;
 
     redLed.max = 255 ;
@@ -95,7 +87,9 @@ void loop() {
     // teachIn() ;
 
     // input
+    
     debounceInputs() ;
+    readIncFreq() ;
     readDirection() ;
     readDetector() ;
     readSignals() ; // needs altering, this function returns values which are unused

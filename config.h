@@ -5,11 +5,12 @@
 
 extern void debug( String ) ;
 
-extern Debounce detector/*(  )*/ ;
-extern Debounce directionSignal/*(  )*/ ;
-extern Debounce redButton/*(  )*/ ;
-extern Debounce yellowButton/*(  )*/ ;
-extern Debounce greenButton/*(  )*/ ;
+extern Debounce detector ;			// need altering for faster debounce
+extern Debounce directionSignal ;
+extern Debounce redButton ;
+extern Debounce yellowButton ;
+extern Debounce greenButton ;
+extern Debounce receiver ;
 
 typedef struct {
 	uint8_t buttons ;

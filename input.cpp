@@ -72,6 +72,12 @@ uint8_t fallTimeControl( ) {
 
 // FUNCTION CONFIRMED TO WORK 17/01/21
 void debounceInputs() {
+	if( !receiverT ) {	// ever ms
+		receiverT = 1;
+		
+		receiver.debounce() ;
+	}
+	
 	if( !debounceT ) {
 		debounceT = 50 ; //  debounce time in ms
 
@@ -92,6 +98,20 @@ void debounceInputs() {
 	yellowButtonState = yellowButton.getState() ;
 	redButtonState = redButton.getState() ;
 	greenButtonState = greenButton.getState() ;
+}
+
+void readIncFreq() { // ISR
+	uint8_t state = receiver.getState() ;
+	
+	if( state == RISING || state == FALLING ) {
+
+		int8_t currentTime = ( 128 - recvFreqT ) ; // recvFreqT is always decrementing.
+
+		rxFrequency =  constrain( currentTime, 0 , 100 ) ;
+		PORTB ^= (1<<5);							// visual feedback that signal is incomming, to be deleted
+		
+		recvFreqT = 128;
+	}
 }
 
 
