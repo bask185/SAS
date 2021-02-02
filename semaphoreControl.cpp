@@ -4,6 +4,7 @@
 #include "serial.h"
 #include "src/basics/timers.h"
 #include "src/basics/io.h"
+#include "config.h"
 
 // MACROS
 #define stateFunction(x) static bool x##F(void)
@@ -11,7 +12,7 @@
 #define onState runOnce = false; if(!runOnce)
 #define exitState if(!exitFlag) return false; else
 #define State(x) break; case x: if(runOnce) Serial.println(#x); if(x##F())
-#define STATE_MACHINE_BEGIN if(!enabled) { \
+#define STATE_MACHINE_BEGIN semaphore.write( servoPos ) ;if(!enabled) { \
 	if(!semaphoreControlT) enabled = true; } \
 else switch(state){\
 	default: Serial.println("unknown state executed, state is idle now"); state = semaphoreControlIDLE; case semaphoreControlIDLE: return true;
@@ -77,6 +78,7 @@ stateFunction(bounceAfterLowering) {
 		steps = 0 ;
 	}
 	onState {
+				
 		if( steps < massInertiaSteps / 2 )	servoPos -- ;
 		else								servoPos ++ ;
 		
