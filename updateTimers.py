@@ -16,6 +16,8 @@ with open("timers.tab" , "r") as f:
 #print(timers)
 #print(timeBases)
 
+# OCR0A = 124;// = (16*10^6) / (2000*64) - 1 (must be <256)
+# compare match register = [ 16,000,000Hz/ (prescaler * desired interrupt frequency) ] - 1
 ###
 with open("src/basics/timers.cpp", "w") as scheduler:  #scheduler.c 
     scheduler.write('#include "timers.h"\n\n')
@@ -23,14 +25,14 @@ with open("src/basics/timers.cpp", "w") as scheduler:  #scheduler.c
     scheduler.write("""
 	TCCR2B = 0;// same for TCCR2B
 	TCNT2  = 0;//initialize counter value to 0
-	// set compare match register for 8khz increments
-	OCR2A = 249;// = (16*10^6) / (1000*64) - 1 (must be <256)
+	// set compare match register for 1khz increments
+	OCR2A = 61;// = (16*10^6) / (1000*64) - 1 (must be <256)
 	// turn on CTC mode
 	TCCR2A |= (1 << WGM21);
 	// Set CS21and and CS20 bit for 64 prescaler
-	TCCR2B |= (1 << CS20);
-	TCCR2B |= (1 << CS21); 
-	TCCR2B &= ~(1 << CS22); 
+	//TCCR2B |= (1 << CS20);
+	//TCCR2B |= (1 << CS21); 
+	TCCR2B |= (1 << CS22); 
 	// enable timer compare interrupt
 	TIMSK2 |= (1 << OCIE2A); }
 

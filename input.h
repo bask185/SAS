@@ -6,4 +6,4 @@ extern void debounceInputs( ) ;
 extern void readIncFreq( ) ;
 extern void readDirection( ) ;
 extern void readDetector( ) ;
-extern void readSignals( ) ;
+extern uint8_t processSignals( ) ;

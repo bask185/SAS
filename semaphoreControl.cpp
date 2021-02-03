@@ -1,10 +1,11 @@
 // HEADER FILES
 #include <Arduino.h>
 #include "semaphoreControl.h"
-#include "serial.h"
+//#include "serial.h"
 #include "src/basics/timers.h"
 #include "src/basics/io.h"
 #include "config.h"
+#include <Servo.h>
 
 // MACROS
 #define stateFunction(x) static bool x##F(void)
@@ -19,7 +20,7 @@ else switch(state){\
 #define STATE_MACHINE_END break;}return false;
 
 
-//#define beginState
+#define beginState raising
 #ifndef beginState
 #error beginState not yet defined
 #endif
@@ -27,6 +28,9 @@ else switch(state){\
 // VARIABLES
 static unsigned char state = beginState;
 static bool enabled = true, runOnce = true, exitFlag = false;
+
+
+Servo semaphore ;
 
 // FUNCTIONS
 extern void semaphoreControlInit(void) { state = beginState; }
@@ -46,7 +50,7 @@ const int massInertiaSteps = 9 ;
 // STATE FUNCTIONS
 stateFunction(up) {
 	entryState {
-		semaphore.detach( servoPin );
+		semaphore.detach( );
 	}
 	onState {
 		if( signal.state == yellow || signal.state == red ) exitFlag = true; 
@@ -92,7 +96,7 @@ stateFunction(bounceAfterLowering) {
 
 stateFunction(down) {
 	entryState {
-		semaphore.detach( servoPin );
+		semaphore.detach( );
 	}
 	onState {
 		if( signal.state == green )  exitFlag = true;

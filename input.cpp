@@ -43,10 +43,14 @@ void readDetector( ) {
 
 uint8_t fallTimeControl( ) {
 
+	if( rxFrequency != 0 ) return undefined ;
+
 	if( detectorState == RISING ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
-		fallT = analogRead( potPin ) / 10 ;		// a time based signal must no longer last than 100 seconds tops.
-		if( fallT <= 2 ) fallT = 0 ; 					// if pot is turned to full mininum, disable fall time control
-		//Serial.print("fall time = ");//Serial.println(fallT);
+		uint16_t sample = analogRead( potPin ) ;		// a time based signal must no longer last than 100 seconds tops.
+		fallT = map( sample, 0, 1023, 0, 60 ) ;
+
+		if( fallT <= 1 ) fallT = 0 ; 						// if pot is turned to full mininum, disable fall time control
+		Serial.print("fall time = ");Serial.println(fallT);
 	}
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
@@ -90,25 +94,25 @@ void debounceInputs() {
 
 		// stuff states in these variables for the remainder of the program's cycle		
 
-		// if(greenButtonState == FALLING ) PORTB |= (1<<5); THIS WORKS
+		// if(greenButtonState == FALLING ) PORTB |= (1<<5); 
 	    // if(yellowButtonState == FALLING ) PORTB &= ~(1<<5);
 		// if(redButtonState == FALLING ) PORTB ^= (1<<5);
 	}
 	detectorState = detector.getState() ;
 	yellowButtonState = yellowButton.getState() ;
 	redButtonState = redButton.getState() ;
-	greenButtonState = greenButton.getState() ;
+	greenButtonState = greenButton.getState() ;		
 }
 
 void readIncFreq() { // ISR
 	uint8_t state = receiver.getState() ;
 	
+	//rxFrequency = 0 ;
 	if( state == RISING || state == FALLING ) {
 
 		int8_t currentTime = ( 128 - recvFreqT ) ; // recvFreqT is always decrementing.
 
 		rxFrequency =  constrain( currentTime, 0 , 100 ) ;
-		PORTB ^= (1<<5);							// visual feedback that signal is incomming, to be deleted
 		
 		recvFreqT = 128;
 	}
@@ -131,14 +135,13 @@ void readDirection() {
 
 
 
-void readSignals() {
-	static uint8_t previousSignalState;
+uint8_t processSignals() {
+	static uint8_t previousSignalState = 255 ;
 
 	signal.recvFreq = rxFrequency;
 
-	Serial.println(signal.recvFreq);
+	// if( signal.connected == 0 ) return undefined ; // if not connected
 
-	signal.connected = 1; // set true
 	if (	 signal.recvFreq >  greenFreq - 3 && signal.recvFreq <  greenFreq + 3 ) { nextSignal.state =     green ; }
 	else if( signal.recvFreq > yellowFreq - 3 && signal.recvFreq < yellowFreq + 3 ) { nextSignal.state =    yellow ; }
 	else if( signal.recvFreq >    redFreq - 3 && signal.recvFreq <    redFreq + 3 ) { nextSignal.state =       red ; }
@@ -147,7 +150,10 @@ void readSignals() {
 	if( previousSignalState != nextSignal.state ) {
 		previousSignalState = nextSignal.state ;
 
+		Serial.print("rxFrequency"); Serial.println(rxFrequency);
+
 		switch( nextSignal.state ) {	// set these flags
+			default: return undefined ;
 			case red:    nextSignal.transitionedToRed	 = 1 ; Serial.println(" nextSignal.transitionedToRed"); break ;
 			case yellow: nextSignal.transitionedToYellow = 1 ; Serial.println(" nextSignal.transitionedToYellow"); break ;
 			case green:	 nextSignal.transitionedToGreen	 = 1 ; Serial.println(" nextSignal.transitionedToGreen");break ;
@@ -159,8 +165,8 @@ void readSignals() {
 		case dutchPreSignal: 
 			switch( nextSignal.state ) {
 				default:	 return undefined ; 	// need alteringex
-				case green:	 return expectGreen ; 
-				case red:	 return expectRed ; 
+				case green:	 return green ; // expectGreen
+				case red:	 return yellow ; // expectRed
 			}
 
 		/* GERMAN PRE SIGNAL KNOWS EXPECTING GREEN, YELLOW OR RED */
@@ -169,7 +175,7 @@ void readSignals() {
 				default:	 return undefined ;
 				case green:  return expectGreen ;
 				case yellow: return expectYellow ;
-				case red:	 return expectRed ;
+				case red:	 return red ;
 			}
 
 		case mainSignal:	// if a main signal receives a signal that the following state is red, it's own state becomes green
@@ -187,6 +193,7 @@ void readSignals() {
 			}
 		}
 	}
+	return undefined ;
 }
 
 

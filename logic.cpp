@@ -17,11 +17,11 @@ void computeLogic( ) {
 	uint8_t temp 			 = undefined ;
 	
 
-	if( signal.type == dutchPreSignal || signal.type == germanPreSignal ) { // pre signals do not bother them selfes with locks, direction and detectors.
-		//newSignalState = processSignals() ; OBSOLETE FUNCTION, NEEDS ALTERING
-	}
+	//if( signal.type == dutchPreSignal || signal.type == germanPreSignal ) { // pre signals do not bother them selfes with locks, direction and detectors.
+	newSignalState = processSignals() ;// OBSOLETE FUNCTION, NEEDS ALTERING
+	//}
 	// the SAS can work both with partially detected blocks as fully detected blocks
-	else if( signal.locked == 0 ) {							// if signal is not locked (inverted signal)
+	if( signal.locked == 0 ) {							// if signal is not locked (inverted signal)
 
 		if( signal.wasLocked ) {								// if the signal was locked, it's previous state must be assumed
 			signal.wasLocked = 0 ;
@@ -76,10 +76,10 @@ void computeLogic( ) {
 		return ;
 	}
 
-	if(		 newSignalState   != undefined ) { newState = newSignalState  ;  } //Serial.println("newSignalState"); }
-	else if( newDetectorState != undefined ) { newState = newDetectorState ; } //Serial.println("newDetectorState"); }
-	else if( newFallTimeState != undefined ) { newState = newFallTimeState ; } //Serial.println("newFallTimeState"); }
-	else if( newButtonState   != undefined ) { newState = newButtonState ;   } //Serial.println("newButtonState"); }
+	if(		 newSignalState   != undefined ) { newState = newSignalState  ;  Serial.println("newSignalState"); }
+	else if( newDetectorState != undefined ) { newState = newDetectorState ; Serial.println("newDetectorState"); }
+	else if( newFallTimeState != undefined ) { newState = newFallTimeState ; Serial.println("newFallTimeState"); }
+	else if( newButtonState   != undefined ) { newState = newButtonState ;   Serial.println("newButtonState"); }
 
 	if( newState != undefined ) {
 

@@ -24,7 +24,9 @@ uint8_t detectorState ;
 Signal signal ;
 NextSignal nextSignal ;
 
-Servo semaphore ;
+//Servo semaphore ;
+extern uint8_t servoPosMax ;
+extern uint8_t servoPosMin ;
 
 Led redLed    ;
 Led yellowLed ;

@@ -24,7 +24,6 @@ void sendSignals( ) {
     if( !sendFreqT ) {
         sendFreqT =  signal.sendFreq ; // green = 10, yellow = 20, red  = 30
 
-        
         switch( signal.state ) { // note pre signals are not supposed to send signals back?
             case green:          signal.sendFreq = greenFreq ;    break ;
             case yellow:         signal.sendFreq = yellowFreq ;   break ;
@@ -54,7 +53,7 @@ void controlBrakeModule( ) {    // it may be that for analog trains something sp
         digitalWrite( slowSpeed, LOW ) ;
     }
     else if( signal.state == yellow ) {    // yellow signal must also set slow speed signal. This may be depended on module type.
-        digitalWrite( relayPin, HIGH ) ;
+        digitalWrite( relayPin, LOW ) ;
         digitalWrite( slowSpeed, HIGH );
     } 
     else {
@@ -66,57 +65,53 @@ void controlBrakeModule( ) {    // it may be that for analog trains something sp
 
 
 void fadeLeds() {
-    if( (  greenLed.state == 1 ) && (  greenLed.pwm <  greenLed.max ) )  greenLed.pwm ++ ; // actual brightness is handled in timer 1 ISR
-    if( ( yellowLed.state == 1 ) && ( yellowLed.pwm < yellowLed.max ) ) yellowLed.pwm ++ ;
-    if( (    redLed.state == 1 ) && (    redLed.pwm <    redLed.max ) )    redLed.pwm ++ ;
+    if(   greenLed.state == 1 ) /*&& (  greenLed.pwm <  greenLed.max )* / ) {  greenLed.pwm ++ ;*/digitalWrite( greenLedPin, HIGH ) ;// }
+    if(  yellowLed.state == 1 ) /*&& ( yellowLed.pwm < yellowLed.max )* / ) { yellowLed.pwm ++ ;*/digitalWrite( yellowLedPin, HIGH ) ;// }
+    if(     redLed.state == 1 ) /*&& (    redLed.pwm <    redLed.max )* / ) {    redLed.pwm ++ ;*/digitalWrite( redLedPin, HIGH ) ;// }
 
-    if( (  greenLed.state == 0 ) && (  greenLed.pwm >  greenLed.min ) )  greenLed.pwm -- ;
-    if( ( yellowLed.state == 0 ) && ( yellowLed.pwm > yellowLed.min ) ) yellowLed.pwm -- ;
-    if( (    redLed.state == 0 ) && (    redLed.pwm >    redLed.min ) )    redLed.pwm -- ;
+    if(   greenLed.state == 0 ) /*&& (  greenLed.pwm >  greenLed.min )* / ) {  greenLed.pwm -- ;*/digitalWrite( greenLedPin, LOW ) ;// }
+    if(  yellowLed.state == 0 ) /*&& ( yellowLed.pwm > yellowLed.min )* / ) { yellowLed.pwm -- ;*/digitalWrite( yellowLedPin, LOW ) ;// }
+    if(     redLed.state == 0 ) /*&& (    redLed.pwm >    redLed.min )* / ) {    redLed.pwm -- ;*/digitalWrite( redLedPin, LOW ) ;// }
 
     //Serial.print(greenLed.pwm);Serial.print(" "); Serial.print(yellowLed.pwm);Serial.print(" ");Serial.println(redLed.pwm);
 }
 
 
 
-ISR(TIMER1_COMPA_vect) { // timer 1 ISR must run at 9kHz
-    static byte dutyCycle = 0;
+// ISR(TIMER0_COMPA_vect) { // timer 1 ISR must run at 9kHz
+//     static byte dutyCycle = 0;
+//     static uint8_t localRed, localGreen, localYellow;
 
-     //PORTB ^= (1<<5) ;
-    //static byte servoPulse = 0;
+//     if( dutyCycle == 0 ) {
+//         localRed = redLed.pwm ;
+//         localYellow = yellowLed.pwm ;
+//         localGreen = greenLed.pwm ;
 
-    //if( servoPulse == 0 ) digitalWrite( servoPin, HIGH ) ;
-
-    if( dutyCycle == 0 ) {
-        if( redLed.pwm    > 0 ) PORTB |= (1<<2) ; // change to port instructions when finished
-        if( yellowLed.pwm > 0 ) PORTB |= (1<<3) ;
-        if( greenLed.pwm  > 0 ) PORTB |= (1<<4) ;
-    }
+//         if( localRed    > 0 ) PORTB |= (1<<2) ; // change to port instructions when finished
+//         if( localYellow > 0 ) PORTB |= (1<<3) ;
+//         if( localGreen  > 0 ) PORTB |= (1<<4) ;
+//     }
 
 
-    if( dutyCycle ==    redLed.pwm )  PORTB &= ~(1<<2) ;
-    if( dutyCycle == yellowLed.pwm )  PORTB &= ~(1<<3) ;
-    if( dutyCycle ==  greenLed.pwm )  PORTB &= ~(1<<4) ;
-
-    //if( servoPulse == servoPos )     digitalWrite( servoPin,  LOW ) ;
-
+//     if( dutyCycle ==    localRed )  PORTB &= ~(1<<2) ;
+//     if( dutyCycle == localYellow )  PORTB &= ~(1<<3) ;
+//     if( dutyCycle ==  greenLed.pwm )  PORTB &= ~(1<<4) ;
    
 
-    dutyCycle ++ ;
-    //if( ++servoPulse == 20000 ) servoPulse = 0 ; // 20
-}
+//     dutyCycle ++ ;
+// }
 
-extern void initTimer1() {
-    TCCR1A = 0;// set entire TCCR1A register to 0
-    TCCR1B = 0;// same for TCCR1B
-    TCNT1  = 0;//initialize counter value to 0
+extern void initTimer0() {
+    TCCR0A = 0;// set entire TCCR1A register to 0
+    TCCR0B = 0;// same for TCCR1B
+    TCNT0  = 0;//initialize counter value to 0
     // set compare match register for 1hz increments
-    OCR1A = 133;// = (16*10^6) / (1*1024) - 1 (must be <65536)
+    OCR0A = 60;// = (16*10^6) / (1*1024) - 1 (must be <65536)
     // turn on CTC mode
-    TCCR1B |= (1 << WGM12);
+    TCCR0B |= (1 << WGM02);
     // Set CS10 and CS12 bits for 1024 prescaler
-    TCCR1B |= (1 << CS11) ;
+    TCCR0B |= (1 << CS01) ;
     // enable timer compare interrupt
-    TIMSK1 |= (1 << OCIE1A);
+    TIMSK0 |= (1 << OCIE0A);
 
 }

@@ -7,32 +7,6 @@
 #include "config.h"
 
 
-
-void setup() {
-    cli() ;
-    
-    initIO() ;
-    initTimers() ;
-    initTimer1() ;
-    //attachInterrupt( digitalPinToInterrupt( Rx ), readIncFreq, CHANGE ) ; OBSOLETE, MOVED TO DIFFERENT IO AND IS NO LONGER AN INTERRUPT
-    sei() ;
-
-    redLed.max = 255 ;
-    yellowLed.max  = 255 ;
-    greenLed.max  = 20 ;
-
-    signal.locked = 0 ;
-    signal.section = available ; // INPUT DIPSWITCHES NEEDED HERE
-    signal.type = dutchPreSignal ;
-    signal.state = green ;
-    signal.wasLocked = 0 ;
-
-    Serial.begin(115200);
-}
-
-#define printNewState(x) case x: //Serial.println(#x) ; break;
-
-
 /* General idea:
 
 *    With the SAS modules, one can make make either a dutch
@@ -82,6 +56,29 @@ when may a yellow showing combi signal become green?
 */
 
 
+void setup() {
+    cli() ;
+    
+    initIO() ;
+    initTimers() ;
+    // initTimer0() ;
+    sei() ;
+
+    redLed.max = 255 ;
+    yellowLed.max  = 255 ;
+    greenLed.max  = 20 ;
+
+    signal.locked = 0 ;
+    signal.section = available ; // INPUT DIPSWITCHES NEEDED HERE
+    signal.type = combiSignal ;
+    signal.state = green ;
+    signal.wasLocked = 0 ;
+
+    Serial.begin(115200);
+    Serial.println("sup");
+}
+
+
 
 void loop() {
     // teachIn() ;
@@ -92,10 +89,7 @@ void loop() {
     readIncFreq() ;
     readDirection() ;
     readDetector() ;
-    readSignals() ; // needs altering, this function returns values which are unused
     
-
-
     // logic
     computeLogic( ) ;    // takes input and calculate what all relevant variables should be.
     setLedStates( ) ;
