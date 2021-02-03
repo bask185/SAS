@@ -28,7 +28,7 @@ void sendSignals( ) {
             case green:          signal.sendFreq = greenFreq ;    break ;
             case yellow:         signal.sendFreq = yellowFreq ;   break ;
             case red:            signal.sendFreq = redFreq ;      break ;
-            case driveOnSight:   signal.sendFreq = yellowFreq ;   break ; // in the event of driving on sight, signal yellow to previous staet
+            case driveOnSight:   signal.sendFreq = redFreq ;   break ; // in the event of driving on sight, signal yellow to previous staet
         }
         
         state ^= 1 ;

@@ -43,7 +43,7 @@ void readDetector( ) {
 
 uint8_t fallTimeControl( ) {
 
-	if( rxFrequency != 0 ) return undefined ;
+	if( rxFrequency ) return undefined ;
 
 	if( detectorState == RISING ) {	// if the detector no longer sees the train and there is no incomming signal, the yellow/red delay timer must be set.
 		uint16_t sample = analogRead( potPin ) ;		// a time based signal must no longer last than 100 seconds tops.
@@ -58,9 +58,9 @@ uint8_t fallTimeControl( ) {
 
 		if( signal.type == combiSignal) {		// combi signal goes first to yellow before going to green
 			if( signal.state == red ) {
-				int sample = analogRead( potPin ) ;
-				if( sample < 10 ) fallT = 0 ;
-				else fallT = sample / 10 ;
+				uint16_t sample = analogRead( potPin ) ;		// a time based signal must no longer last than 100 seconds tops.
+				fallT = map( sample, 0, 1023, 0, 60 ) ;
+				if( fallT <= 1 ) fallT = 0 ; 
 				return yellow ;
 			}
 			else if ( signal.state == yellow || signal.state == driveOnSight ) { return green ; }
