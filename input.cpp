@@ -37,6 +37,7 @@ void readDetector( ) {
 	if( detectorState == FALLING )
 	{
 		signal.section = occupied ;
+		fallT = 0 ;
 	}
 }
 

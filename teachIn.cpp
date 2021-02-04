@@ -65,7 +65,8 @@ extern void teachInInit(void) {
 
 
 #define printType(x) case x: Serial.println(#x);break;
-	signal.type = ( digitalRead( dip1 ) << 1 ) | ( digitalRead( dip0 ) ) ;	// determen which signal type
+	//signal.type = ( digitalRead( dip1 ) << 1 ) | ( digitalRead( dip0 ) ) ;	// determen which signal type
+	signal.type = mainSignal ;
 	switch( signal.type ) {
 		printType( mainSignal ) ;
 		printType( combiSignal ) ;
@@ -74,6 +75,7 @@ extern void teachInInit(void) {
 	}
 
 	signal.passFromBehind = digitalRead( dip3 );							// if a signal is locked, it may be passed from behind
+	if( signal.passFromBehind ) Serial.println("passing from behind allowed") ;
 	
 	// dip 4 has no purpose yet
 	
@@ -116,6 +118,8 @@ stateFunction(adjustGreenBrightness) {
 		greenLed.pwm = 255 ;
 		teachInT = 250 ; // 2,5 second for on time led
 		digitalWrite( greenLedPin, HIGH ) ;
+		digitalWrite( yellowLedPin,  LOW ) ;
+		digitalWrite( redLedPin,  LOW ) ;
 		timeOutT = 250 ; // 25 seconds timeout should suffice
 	}
 	onState {
@@ -197,6 +201,7 @@ stateFunction(setServoRed) {
 	entryState { 
 		timeOutT = 250; // 25 seconds timeout should suffice
 		semaphore.attach( servoPin );
+		digitalWrite( redLedPin, HIGH ) ;
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
@@ -212,6 +217,7 @@ stateFunction(setServoRed) {
 	exitState {
 		EEPROM.write( RED_SERVO_POS, servoPosMax ) ;
 		semaphore.detach();
+		digitalWrite( redLedPin, LOW ) ;
 		return true;
 	}
 }
@@ -222,6 +228,7 @@ stateFunction(setServoGreen) {
 	entryState {
 		timeOutT = 250; // 25 seconds timeout should suffice
 		semaphore.attach(servoPin);
+		digitalWrite( greenLedPin, HIGH ) ;
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
@@ -238,6 +245,7 @@ stateFunction(setServoGreen) {
 	exitState {
 		EEPROM.write( GREEN_SERVO_POS, servoPosMin ) ;
 		semaphore.detach();
+		digitalWrite( greenLedPin, LOW ) ;
 		return true;
 	}
 }
@@ -247,27 +255,27 @@ extern bool teachIn(void) {
 	STATE_MACHINE_BEGIN
 
 	State(waitButtonPress) {
-		nextState(adjustGreenBrightness, 10) ; }
+		nextState(adjustGreenBrightness, 100) ; }
 
 	State(adjustGreenBrightness) {
-		if( !timeOutT ) 					 nextState(waitButtonPress, 10) ;
-		else if( signal.type == mainSignal ) nextState(adjustRedBrightness, 10) ;
-		else								 nextState(adjustYellowBrightness, 10) ; }
+		if( !timeOutT ) 					 nextState(waitButtonPress, 100) ;
+		else if( signal.type == mainSignal ) nextState(adjustRedBrightness, 100) ;
+		else								 nextState(adjustYellowBrightness, 100) ; }
 
 	State(adjustYellowBrightness) {
-		if( !timeOutT ) nextState(waitButtonPress, 10) ;
-		else 			nextState(adjustRedBrightness, 10) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 100) ;
+		else 			nextState(adjustRedBrightness, 100) ; }
 
 	State(adjustRedBrightness) {
-		if( !timeOutT ) nextState(waitButtonPress, 10) ;
-		else			nextState(setServoRed, 10) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 100) ;
+		else			nextState(setServoRed, 100) ; }
 
 	State(setServoRed) {
-		if( !timeOutT ) nextState(waitButtonPress, 10) ;
-		else			nextState(setServoGreen, 10) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 100) ;
+		else			nextState(setServoGreen, 100) ; }
 
 	State(setServoGreen) {
-		nextState(waitButtonPress, 10) ; }
+		nextState(waitButtonPress, 100) ; }
 
 	STATE_MACHINE_END
 }
