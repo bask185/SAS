@@ -5,7 +5,7 @@
 #include "src/basics/timers.h"
 #include "src/basics/io.h"
 #include "config.h"
-#include <Servo.h>
+//#include <Servo.h>
 
 // MACROS
 #define stateFunction(x) static bool x##F(void)
@@ -26,11 +26,9 @@ else switch(state){\
 #endif
 
 // VARIABLES
-static unsigned char state = beginState;
+static unsigned char state = beginState ;
 static bool enabled = true, runOnce = true, exitFlag = false;
 
-
-Servo semaphore ;
 
 // FUNCTIONS
 extern void semaphoreControlInit(void) { state = beginState; }
@@ -83,8 +81,8 @@ stateFunction(bounceAfterLowering) {
 	}
 	onState {
 				
-		if( steps < massInertiaSteps / 2 )	servoPos -- ;
-		else								servoPos ++ ;
+		if( steps < (massInertiaSteps / 2) )	servoPos -- ;
+		else									servoPos ++ ;
 		
 		if( ++steps == massInertiaSteps )	exitFlag = true; 
 	}

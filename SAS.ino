@@ -81,11 +81,12 @@ void setup() {
 
 
 void loop() {
-    // teachIn() ;
-
-    // input
     
+    // input
     debounceInputs() ;
+    
+    if( teachIn() ) return ;    // if this menu is active, all other code is to be disabled
+    
     readIncFreq() ;
     readDirection() ;
     readDetector() ;
@@ -95,11 +96,10 @@ void loop() {
     setLedStates( ) ;
 
     //  output
-    sendSignals() ;            // send the signal to the adjacent module
-    repeat( &fadeT, 1, fadeLeds );            // fade leds in and out to emulate glowblub effects, currently this takes 1/4 of a setting
-    //servoControl() ;        // handle the arm's servo motor including mass inertia movement
-    controlBrakeModule() ;    // handles the braking/shutoff  relay
-
+    sendSignals() ;                             // send the signal to the adjacent module
+    repeat( &fadeT, 1, fadeLeds );              // fade leds in and out to emulate glowblub effects, currently this takes 1/4 of a setting
+    repeat( &servoT, 20, servoControl ) ;       // handle the arm's servo motor including mass inertia movement every, takes 1 step every x time
+    controlBrakeModule() ;                      // handles the braking modules/shutoff relay
 }
 
 

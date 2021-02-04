@@ -95,7 +95,7 @@ stateFunction( waitButtonPress ) { // just wait on the first button press
 		
 	}
 	onState {
-		if( analogRead( potPin ) ) exitFlag = true ;
+		if( analogRead( potPin ) ) exitFlag = true ; // if value is zero, it means the button of the config thingy is pressed
 	}
 	exitState {
 

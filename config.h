@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 #include "src/modules/debounceClass.h"
-//#include <Servo.h>
+#include <Servo.h>
 
 extern void debug( String ) ;
 
@@ -13,7 +13,7 @@ extern Debounce yellowButton ;
 extern Debounce greenButton ;
 extern Debounce receiver ;
 
-//extern Servo semaphore ;
+extern Servo semaphore ;
 
 extern uint8_t servoPosMax ;
 extern uint8_t servoPosMin ;
