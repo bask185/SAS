@@ -53,7 +53,7 @@ void controlBrakeModule( ) {    // it may be that for analog trains something sp
         digitalWrite( slowSpeed, LOW ) ;
     }
     else if( signal.state == yellow ) {    // yellow signal must also set slow speed signal. This may be depended on module type.
-        digitalWrite( relayPin, LOW ) ;
+        digitalWrite( relayPin, HIGH ) ;
         digitalWrite( slowSpeed, HIGH );
     } 
     else {

@@ -5,6 +5,7 @@
 #include "output.h"
 #include "logic.h"
 #include "config.h"
+#include "semaphoreControl.h"
 
 
 /* General idea:
@@ -78,6 +79,7 @@ void setup() {
     Serial.println("sup");
     
     teachInInit();
+    semaphoreControlInit();
 }
 
 
@@ -87,7 +89,8 @@ void loop() {
     // input
     debounceInputs() ;
     
-    if( teachIn() ) return ;    // if this menu is active, all other code is to be disabled
+    teachIn() ;
+    if( teachInGetState() != waitButtonPress ) return ;
     
     readIncFreq() ;
     readDirection() ;
@@ -100,7 +103,7 @@ void loop() {
     //  output
     sendSignals() ;                             // send the signal to the adjacent module
     repeat( &fadeT, 1, fadeLeds );              // fade leds in and out to emulate glowblub effects, currently this takes 1/4 of a setting
-    repeat( &servoT, 20, servoControl ) ;       // handle the arm's servo motor including mass inertia movement every, takes 1 step every x time
+    repeat( &servoT, 20, semaphoreControl ) ;       // handle the arm's servo motor including mass inertia movement every, takes 1 step every x time
     controlBrakeModule() ;                      // handles the braking modules/shutoff relay
 }
 

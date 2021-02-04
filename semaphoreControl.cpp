@@ -31,7 +31,7 @@ static bool enabled = true, runOnce = true, exitFlag = false;
 
 
 // FUNCTIONS
-extern void semaphoreControlInit(void) { state = beginState; }
+extern void semaphoreControlInit(void) { state = beginState;servoPosMin=45;servoPosMax=135; }
 extern byte semaphoreControlGetState(void) { return state;}
 extern void semaphoreControlSetState(unsigned char _state) { state = _state; runOnce = true; }
 static void nextState(unsigned char _state, unsigned char _interval) {
@@ -43,7 +43,7 @@ static void nextState(unsigned char _state, unsigned char _interval) {
 	state = _state; }
 
 
-const int massInertiaSteps = 9 ;
+const int massInertiaSteps = 30 ;
 
 // STATE FUNCTIONS
 stateFunction(up) {
@@ -64,7 +64,7 @@ stateFunction(lowering) {
 		
 	}
 	onState {
-		if( servoPos <  servoPosMin )	servoPos -- ;
+		if( servoPos > servoPosMin ) servoPos -- ;
 		else exitFlag = true;
 	}
 	exitState {
@@ -84,7 +84,8 @@ stateFunction(bounceAfterLowering) {
 		if( steps < (massInertiaSteps / 2) )	servoPos -- ;
 		else									servoPos ++ ;
 		
-		if( ++steps == massInertiaSteps )	exitFlag = true; 
+		steps ++ ;
+		if( steps >= massInertiaSteps )	exitFlag = true; 
 	}
 	exitState {
 
@@ -129,7 +130,8 @@ stateFunction(bounceAfterRaising) {
 		if( steps < massInertiaSteps / 2 )	servoPos ++ ;
 		else								servoPos -- ;
 
-		if( ++steps == massInertiaSteps )	exitFlag = true;
+		steps ++ ;
+		if( steps >= massInertiaSteps )	exitFlag = true;
 	}
 	exitState {
 

@@ -21,7 +21,7 @@ enum EEaddresses {
 #define entryState if(runOnce) 
 #define onState runOnce = false; if(!runOnce)
 #define exitState if(!exitFlag) return false; else
-#define State(x) break; case x: /*if(runOnce) Serial.println(#x) ;*/ if(x##F())
+#define State(x) break; case x: if(runOnce) Serial.println(#x) ; if(x##F())
 #define STATE_MACHINE_BEGIN if(!enabled) { \
 	if(!teachInT) enabled = true; } \
 else switch(state){\
@@ -57,13 +57,22 @@ extern void teachInInit(void) {
 		Serial.println("FIRST TIME BOOTING SAS SOFTWARE V1.O, DEFAULT SETTINGS ARE LOADED") ;
 	}
 
-	servoPosMin =	EEPROM.read( GREEN_SERVO_POS ) ;
-	servoPosMax   =	EEPROM.read( RED_SERVO_POS ) ;
+	servoPosMin =	/*EEPROM.read( GREEN_SERVO_POS ) ;*/ 45 ;
+	servoPosMax   =	/*EEPROM.read( RED_SERVO_POS ) ;*/ 135 ;
 	greenLed.max  =	EEPROM.read( PWM_GREEN_ADDR ) ;
 	yellowLed.max =	EEPROM.read( PWM_YELLOW_ADDR ) ;
 	redLed.max    =	EEPROM.read( PWM_RED_ADDR ) ;
 
+
+#define printType(x) case x: Serial.println(#x);break;
 	signal.type = ( digitalRead( dip1 ) << 1 ) | ( digitalRead( dip0 ) ) ;	// determen which signal type
+	switch( signal.type ) {
+		printType( mainSignal ) ;
+		printType( combiSignal ) ;
+		printType( dutchPreSignal ) ;
+		printType( germanPreSignal ) ;
+	}
+
 	signal.passFromBehind = digitalRead( dip3 );							// if a signal is locked, it may be passed from behind
 	
 	// dip 4 has no purpose yet
@@ -88,7 +97,11 @@ stateFunction( waitButtonPress ) { // just wait on the first button press
 		
 	}
 	onState {
-		if( analogRead( potPin ) == 0 ) exitFlag = true ; // if value is zero, it means the button of the config thingy is pressed
+		if(!teachInT) { teachInT = 20 ;
+			uint16_t sample = analogRead( configPin ) ;
+			if( sample == 0 ) exitFlag = true ; // if value is zero, it means the button of the config thingy is pressed
+			Serial.println(sample);
+		}
 	}
 	exitState {
 
@@ -102,12 +115,12 @@ stateFunction(adjustGreenBrightness) {
 	entryState {
 		greenLed.pwm = 255 ;
 		teachInT = 250 ; // 2,5 second for on time led
-
+		digitalWrite( greenLedPin, HIGH ) ;
 		timeOutT = 250 ; // 25 seconds timeout should suffice
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potPin ) ;
+			val = analogRead( configPin ) ;
 			if( val < 10 || timeOutT == 0 ) exitFlag = true; // if timeout or button press occurs, exit
 			else {
 				val = map( val, 0, 1023, 0, 255 ) ;
@@ -118,6 +131,7 @@ stateFunction(adjustGreenBrightness) {
 	exitState {
 		greenLed.pwm = 0 ;
 		EEPROM.write( PWM_GREEN_ADDR, greenLed.pwm ) ;
+		digitalWrite( greenLedPin, LOW) ;
 		return true;
 	}
 }
@@ -126,13 +140,14 @@ stateFunction(adjustYellowBrightness) {
 
 	entryState {
 		yellowLed.pwm = 255 ;
+		digitalWrite( yellowLedPin, HIGH ) ;
 		teachInT = 250 ; // 2,5 second for on time led
 
 		timeOutT = 250 ; // 25 seconds timeout should suffice
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potPin ) ;
+			val = analogRead( configPin ) ;
 			if( val < 10 || timeOutT == 0 ) exitFlag = true;
 			else {
 				val = map( val, 0, 1023, 0, 255 ) ;
@@ -142,6 +157,7 @@ stateFunction(adjustYellowBrightness) {
 	}
 	exitState {
 		yellowLed.pwm = 0 ;
+		digitalWrite( yellowLedPin, LOW ) ;
 		EEPROM.write( PWM_YELLOW_ADDR, yellowLed.pwm  ) ;
 		return true;
 	}
@@ -152,13 +168,14 @@ stateFunction(adjustRedBrightness) {
 
 	entryState {
 		redLed.pwm = 255 ;
+		digitalWrite( redLedPin, HIGH ) ;
 		teachInT = 250 ; // 2,5 second for on time led
 
 		timeOutT = 250 ; // 25 seconds timeout should suffice
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potPin ) ;
+			val = analogRead( configPin ) ;
 			if( val < 10 || timeOutT == 0 ) exitFlag = true;
 			else {
 				val = map( val, 0, 1023, 0, 255 ) ;
@@ -168,6 +185,7 @@ stateFunction(adjustRedBrightness) {
 	}
 	exitState {
 		redLed.pwm = 0 ;
+		digitalWrite( redLedPin, LOW ) ;
 		EEPROM.write( PWM_RED_ADDR, redLed.pwm ) ;
 		return true;
 	}
@@ -178,10 +196,11 @@ stateFunction(setServoRed) {
 
 	entryState { 
 		timeOutT = 250; // 25 seconds timeout should suffice
+		semaphore.attach( servoPin );
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potPin ) ;
+			val = analogRead( configPin ) ;
 			if( val < 10 || timeOutT == 0 ) exitFlag = true;
 			else {
 				val = map( val, 0, 1023, 0, 180) ;
@@ -192,6 +211,7 @@ stateFunction(setServoRed) {
 	}
 	exitState {
 		EEPROM.write( RED_SERVO_POS, servoPosMax ) ;
+		semaphore.detach();
 		return true;
 	}
 }
@@ -201,10 +221,11 @@ stateFunction(setServoGreen) {
 
 	entryState {
 		timeOutT = 250; // 25 seconds timeout should suffice
+		semaphore.attach(servoPin);
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
-			val = analogRead( potPin ) ;
+			val = analogRead( configPin ) ;
 
 			if( val < 10 || timeOutT == 0 ) exitFlag = true;
 			else {
@@ -216,6 +237,7 @@ stateFunction(setServoGreen) {
 	}
 	exitState {
 		EEPROM.write( GREEN_SERVO_POS, servoPosMin ) ;
+		semaphore.detach();
 		return true;
 	}
 }
@@ -225,27 +247,27 @@ extern bool teachIn(void) {
 	STATE_MACHINE_BEGIN
 
 	State(waitButtonPress) {
-		nextState(adjustGreenBrightness, 100) ; }
+		nextState(adjustGreenBrightness, 10) ; }
 
 	State(adjustGreenBrightness) {
-		if( !timeOutT ) 					 nextState(waitButtonPress, 100) ;
-		else if( signal.type == mainSignal ) nextState(adjustRedBrightness, 100) ;
-		else								 nextState(adjustYellowBrightness, 100) ; }
+		if( !timeOutT ) 					 nextState(waitButtonPress, 10) ;
+		else if( signal.type == mainSignal ) nextState(adjustRedBrightness, 10) ;
+		else								 nextState(adjustYellowBrightness, 10) ; }
 
 	State(adjustYellowBrightness) {
-		if( !timeOutT ) nextState(waitButtonPress, 100) ;
-		else 			nextState(adjustRedBrightness, 100) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 10) ;
+		else 			nextState(adjustRedBrightness, 10) ; }
 
 	State(adjustRedBrightness) {
-		if( !timeOutT ) nextState(waitButtonPress, 100) ;
-		else			nextState(setServoRed, 100) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 10) ;
+		else			nextState(setServoRed, 10) ; }
 
 	State(setServoRed) {
-		if( !timeOutT ) nextState(waitButtonPress, 100) ;
-		else			nextState(setServoGreen, 100) ; }
+		if( !timeOutT ) nextState(waitButtonPress, 10) ;
+		else			nextState(setServoGreen, 10) ; }
 
 	State(setServoGreen) {
-		nextState(waitButtonPress, 100) ; }
+		nextState(waitButtonPress, 10) ; }
 
 	STATE_MACHINE_END
 }
