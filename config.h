@@ -32,6 +32,7 @@ typedef struct {
 	uint8_t lastState ;
 	uint8_t override ;
 	uint8_t connected ;
+	uint8_t passFromBehind ;
 } Signal ;
 
 extern Signal signal ;
@@ -62,11 +63,11 @@ extern uint8_t directionSignalState ;
 extern uint8_t detectorState ;
 
 enum signalTypes {
-	mainSignal,
-	combiSignal,
-	germanPreSignal,
-	dutchPreSignal,
-	entrySignal,
+	mainSignal, 		// xx00
+	combiSignal,		// xx01
+	germanPreSignal,	// xx10
+	dutchPreSignal,		// xx11
+	/*passFromBehind*/		// x1xx
 } ;
 
 enum signalStates {

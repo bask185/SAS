@@ -44,7 +44,7 @@ void sendSignals( ) {
 
 void controlBrakeModule( ) {    // it may be that for analog trains something specials is needed
 
-    if( signal.locked == 1 /*&& bypass == 1*/ ) {      // If direction is opposite and signal may be bypassed from behind
+    if( signal.locked == 1 && signal.passFromBehind == 1 ) {      // If direction is opposite and signal may be bypassed from behind
         digitalWrite( relayPin, LOW ) ;
         digitalWrite( slowSpeed, LOW );
     }

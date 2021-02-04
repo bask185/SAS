@@ -70,12 +70,14 @@ void setup() {
 
     signal.locked = 0 ;
     signal.section = available ; // INPUT DIPSWITCHES NEEDED HERE
-    signal.type = combiSignal ;
+    //signal.type = combiSignal ; //handled in teachin init
     signal.state = green ;
     signal.wasLocked = 0 ;
 
     Serial.begin(115200);
     Serial.println("sup");
+    
+    teachInInit();
 }
 
 

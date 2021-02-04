@@ -13,8 +13,8 @@ uint8_t previousState = 255;
 uint8_t rxFrequency = 0 ;
 
 uint8_t servoPos ;
-uint8_t servoPosMax = 135 ;
-uint8_t servoPosMin =  45 ;
+uint8_t servoPosMax ;
+uint8_t servoPosMin ;
 
 uint8_t greenButtonState ;
 uint8_t redButtonState ;
@@ -25,8 +25,8 @@ Signal signal ;
 NextSignal nextSignal ;
 
 Servo semaphore ;
-extern uint8_t servoPosMax ;
-extern uint8_t servoPosMin ;
+uint8_t servoPosMax ;
+uint8_t servoPosMin ;
 
 Led redLed    ;
 Led yellowLed ;

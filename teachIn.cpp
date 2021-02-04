@@ -49,33 +49,26 @@ extern void teachInInit(void) {
 	if( firstEntry != 0xCC ) { // is signal is already started once, retreive values
 		EEPROM.write( GREEN_SERVO_POS, 45 ) ;
 		EEPROM.write( RED_SERVO_POS, 135 ) ;
-		EEPROM.write( PWM_GREEN_ADDR, 100 ) ;
- 		EEPROM.write( PWM_YELLOW_ADDR, 100 ) ;
-		EEPROM.write( PWM_RED_ADDR, 100) ;
+		EEPROM.write( PWM_GREEN_ADDR, 255 ) ;
+ 		EEPROM.write( PWM_YELLOW_ADDR, 255 ) ;
+		EEPROM.write( PWM_RED_ADDR, 255) ;
 
 		EEPROM.write( INIT_ADDR, 0xCC) ;
-		//Serial.println("FIRST TIME BOOTING, DEFAULT SETTINGS ARE LOADED") ;
+		Serial.println("FIRST TIME BOOTING SAS SOFTWARE V1.O, DEFAULT SETTINGS ARE LOADED") ;
 	}
 
-	greenServoPos =	EEPROM.read( GREEN_SERVO_POS ) ;
-	redServoPos   =	EEPROM.read( RED_SERVO_POS ) ;
+	servoPosMin =	EEPROM.read( GREEN_SERVO_POS ) ;
+	servoPosMax   =	EEPROM.read( RED_SERVO_POS ) ;
 	greenLed.max  =	EEPROM.read( PWM_GREEN_ADDR ) ;
 	yellowLed.max =	EEPROM.read( PWM_YELLOW_ADDR ) ;
 	redLed.max    =	EEPROM.read( PWM_RED_ADDR ) ;
 
-	signal.type = 
-	  ( digitalRead( dip0 ) << 3 )
-	| ( digitalRead( dip1 ) << 2 )
-	| ( digitalRead( dip2 ) << 1 )
-	| ( digitalRead( dip3 ) << 0 ) ;
+	signal.type = ( digitalRead( dip1 ) << 1 ) | ( digitalRead( dip0 ) ) ;	// determen which signal type
+	signal.passFromBehind = digitalRead( dip3 );							// if a signal is locked, it may be passed from behind
+	
+	// dip 4 has no purpose yet
+	
 
-	// switch( signal.type ) {
-	// 	default:				//Serial.println("unknown type signal selected, correctly set the dipswitches nad reboot") ; break;
-	// 	case dutchPreSignal:	//Serial.println("dutchPreSignal selected") ; 	break;
-	// 	case germanPreSignal:	//Serial.println("germanPreSignal selected") ; 	break;
-	// 	case mainSignal:		//Serial.println("mainSignal selected") ; 		break;
-	// 	case combiSignal:		//Serial.println("combiSignal selected") ; 		break;
-	// }
 }
 
 extern byte teachInGetState(void) { return state;}
@@ -95,7 +88,7 @@ stateFunction( waitButtonPress ) { // just wait on the first button press
 		
 	}
 	onState {
-		if( analogRead( potPin ) ) exitFlag = true ; // if value is zero, it means the button of the config thingy is pressed
+		if( analogRead( potPin ) == 0 ) exitFlag = true ; // if value is zero, it means the button of the config thingy is pressed
 	}
 	exitState {
 
@@ -115,7 +108,7 @@ stateFunction(adjustGreenBrightness) {
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice
 			val = analogRead( potPin ) ;
-			if( val < 10 || timeOutT == 0 ) exitFlag = true;
+			if( val < 10 || timeOutT == 0 ) exitFlag = true; // if timeout or button press occurs, exit
 			else {
 				val = map( val, 0, 1023, 0, 255 ) ;
 				greenLed.pwm = val ;
@@ -124,7 +117,7 @@ stateFunction(adjustGreenBrightness) {
 	}
 	exitState {
 		greenLed.pwm = 0 ;
-		EEPROM.write( PWM_GREEN_ADDR, val ) ;
+		EEPROM.write( PWM_GREEN_ADDR, greenLed.pwm ) ;
 		return true;
 	}
 }
@@ -149,7 +142,7 @@ stateFunction(adjustYellowBrightness) {
 	}
 	exitState {
 		yellowLed.pwm = 0 ;
-		EEPROM.write( PWM_YELLOW_ADDR, val ) ;
+		EEPROM.write( PWM_YELLOW_ADDR, yellowLed.pwm  ) ;
 		return true;
 	}
 }
@@ -175,7 +168,7 @@ stateFunction(adjustRedBrightness) {
 	}
 	exitState {
 		redLed.pwm = 0 ;
-		EEPROM.write( PWM_RED_ADDR, val ) ;
+		EEPROM.write( PWM_RED_ADDR, redLed.pwm ) ;
 		return true;
 	}
 }
@@ -192,12 +185,13 @@ stateFunction(setServoRed) {
 			if( val < 10 || timeOutT == 0 ) exitFlag = true;
 			else {
 				val = map( val, 0, 1023, 0, 180) ;
-				servoPos = val ; ;
+				servoPosMax = val ;
+				semaphore.write( servoPosMax ) ;
 			} 
 		}
 	}
 	exitState {
-		EEPROM.write( RED_SERVO_POS, val ) ;
+		EEPROM.write( RED_SERVO_POS, servoPosMax ) ;
 		return true;
 	}
 }
@@ -215,12 +209,13 @@ stateFunction(setServoGreen) {
 			if( val < 10 || timeOutT == 0 ) exitFlag = true;
 			else {
 				val = map( val, 0, 1023, 0, 180) ;
-				servoPos = val ; ;
+				servoPosMin = val ;
+				semaphore.write( servoPosMin ) ;
 			} 
 		}
 	}
 	exitState {
-		EEPROM.write( GREEN_SERVO_POS, val ) ;
+		EEPROM.write( GREEN_SERVO_POS, servoPosMin ) ;
 		return true;
 	}
 }
