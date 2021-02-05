@@ -38,17 +38,21 @@ extern void semaphoreControlInit(void)
 }
 extern byte semaphoreControlGetState(void) { return state;}
 extern void semaphoreControlSetState(unsigned char _state) { state = _state; runOnce = true; }
-static void nextState(unsigned char _state, unsigned char _interval) {
+static void nextState(unsigned char _state, unsigned char _interval)
+{
 	runOnce = true;
 	exitFlag = false;
-	if(_interval) {
+	if(_interval)
+	{
 		enabled = false;
-		semaphoreControlT = _interval; } 
-	state = _state; }
+		semaphoreControlT = _interval;
+	} 
+	state = _state;
+}
 
 
 	
-uint8_t followServo( setpoint ) 
+uint8_t followServo( uint8_t setpoint ) 
 {
 	if( setpoint < servoPos ) servoPos -- ;
 	if( setpoint > servoPos ) servoPos ++ ;
@@ -93,6 +97,7 @@ stateFunction(lowering) {
 
 stateFunction(bounceAfterLowering) {
 	static uint8_t steps ;
+	static int8_t diff = 0 ;
 	
 	entryState
 	{
@@ -138,7 +143,7 @@ stateFunction(raising) {
 	}
 	onState
 	{
-		if( followServo( servoPosMin ) ) exitFlag = true;
+		if( followServo( servoPosMax ) ) exitFlag = true;
 	}
 	exitState
 	{
@@ -149,7 +154,7 @@ stateFunction(raising) {
 
 stateFunction(bounceAfterRaising) {
 	static uint8_t steps ;
-	int8_t diff ;
+	static int8_t diff ;
 	
 	entryState
 	{
@@ -173,6 +178,8 @@ stateFunction(bounceAfterRaising) {
 
 // STATE MACHINE
 extern bool semaphoreControl(void) {
+	semaphore.write( servoPos ) ;
+	Serial.println( servoPos ) ;
 	STATE_MACHINE_BEGIN
 
 	State(up) {

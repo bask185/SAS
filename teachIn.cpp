@@ -4,6 +4,7 @@
 #include "config.h"
 #include "src/basics/timers.h"
 #include <EEPROM.h>
+#include "src/modules/SoftPWM.h"
 
 
 enum EEaddresses {
@@ -43,8 +44,6 @@ extern void teachInInit(void) {
 
 	state = beginState; 
 
-	servoPos = 90 ;
-
 	uint8_t firstEntry = EEPROM.read( INIT_ADDR ) ;
 	if( firstEntry != 0xCC ) { // is signal is already started once, retreive values
 		EEPROM.write( GREEN_SERVO_POS, 45 ) ;
@@ -57,25 +56,25 @@ extern void teachInInit(void) {
 		Serial.println("FIRST TIME BOOTING SAS SOFTWARE V1.O, DEFAULT SETTINGS ARE LOADED") ;
 	}
 
-	servoPosMin =	/*EEPROM.read( GREEN_SERVO_POS ) ;*/ 45 ;
-	servoPosMax   =	/*EEPROM.read( RED_SERVO_POS ) ;*/ 135 ;
-	greenLed.max  =	EEPROM.read( PWM_GREEN_ADDR ) ;
-	yellowLed.max =	EEPROM.read( PWM_YELLOW_ADDR ) ;
-	redLed.max    =	EEPROM.read( PWM_RED_ADDR ) ;
+	servoPosMin =	EEPROM.read( GREEN_SERVO_POS ) ; Serial.println(servoPosMin);
+	servoPosMax   =	EEPROM.read( RED_SERVO_POS )   ; Serial.println(servoPosMax);
+	greenLed.pwm  =	EEPROM.read( PWM_GREEN_ADDR ) ;  Serial.println(greenLed.pwm );
+	yellowLed.pwm =	EEPROM.read( PWM_YELLOW_ADDR ) ; Serial.println(yellowLed.pwm);
+	redLed.pwm    =	EEPROM.read( PWM_RED_ADDR ) ;    Serial.println(redLed.pwm);
 
 
 #define printType(x) case x: Serial.println(#x);break;
-	//signal.type = ( digitalRead( dip1 ) << 1 ) | ( digitalRead( dip0 ) ) ;	// determen which signal type
-	signal.type = mainSignal ;
-	switch( signal.type ) {
-		printType( mainSignal ) ;
-		printType( combiSignal ) ;
-		printType( dutchPreSignal ) ;
-		printType( germanPreSignal ) ;
+	signal.type = ( digitalRead( dip2 ) << 1 ) | ( digitalRead( dip1 ) ) ;	// determen which signal type
+	switch( signal.type ) {					//	1	2	3	4
+		printType( mainSignal ) ;			//	ON	ON	X	X
+		printType( combiSignal ) ;			//	OFF	ON	X	X
+		printType( dutchPreSignal ) ;		//	OFF	OFF	X	X
+		printType( germanPreSignal ) ;		//	ON	OFF	X	X
 	}
 
-	signal.passFromBehind = digitalRead( dip3 );							// if a signal is locked, it may be passed from behind
+	signal.passFromBehind = !digitalRead( dip4 );							// if a signal is locked, it may be passed from behind
 	if( signal.passFromBehind ) Serial.println("passing from behind allowed") ;
+	//	DIP 4 IS ON => PASSING FROM BEHIND ALLOWED
 	
 	// dip 4 has no purpose yet
 	
@@ -103,7 +102,6 @@ stateFunction( waitButtonPress ) { // just wait on the first button press
 		if(!teachInT) { teachInT = 20 ;
 			uint16_t sample = analogRead( configPin ) ;
 			if( sample == 0 ) exitFlag = true ; // if value is zero, it means the button of the config thingy is pressed
-			Serial.println(sample);
 		}
 	}
 	exitState {
@@ -116,11 +114,10 @@ stateFunction(adjustGreenBrightness) {
 	uint16_t val ;
 
 	entryState {
-		greenLed.pwm = 255 ;
+		SoftPWMSet( greenLedPin, 255 ) ;
+		SoftPWMSet( yellowLedPin, 0 ) ;
+		SoftPWMSet( redLedPin, 0 ) ;
 		teachInT = 250 ; // 2,5 second for on time led
-		digitalWrite( greenLedPin, HIGH ) ;
-		digitalWrite( yellowLedPin,  LOW ) ;
-		digitalWrite( redLedPin,  LOW ) ;
 		timeOutT = 250 ; // 25 seconds timeout should suffice
 	}
 	onState {
@@ -131,12 +128,12 @@ stateFunction(adjustGreenBrightness) {
 				val = map( val, 0, 1023, 0, 255 ) ;
 				greenLed.pwm = val ;
 			}
+			SoftPWMSet( greenLedPin, greenLed.pwm ) ;
 		}
 	}
 	exitState {
-		greenLed.pwm = 0 ;
 		EEPROM.write( PWM_GREEN_ADDR, greenLed.pwm ) ;
-		digitalWrite( greenLedPin, LOW) ;
+		SoftPWMSet( greenLedPin, 0 ) ;
 		return true;
 	}
 }
@@ -144,10 +141,8 @@ stateFunction(adjustYellowBrightness) {
 	uint16_t val ;
 
 	entryState {
-		yellowLed.pwm = 255 ;
-		digitalWrite( yellowLedPin, HIGH ) ;
+		SoftPWMSet( yellowLedPin, 255 ) ;
 		teachInT = 250 ; // 2,5 second for on time led
-
 		timeOutT = 250 ; // 25 seconds timeout should suffice
 	}
 	onState {
@@ -158,11 +153,11 @@ stateFunction(adjustYellowBrightness) {
 				val = map( val, 0, 1023, 0, 255 ) ;
 				yellowLed.pwm = val ;
 			}
+			SoftPWMSet(yellowLedPin, yellowLed.pwm);
 		}
 	}
 	exitState {
-		yellowLed.pwm = 0 ;
-		digitalWrite( yellowLedPin, LOW ) ;
+		SoftPWMSet(yellowLedPin, 0);
 		EEPROM.write( PWM_YELLOW_ADDR, yellowLed.pwm  ) ;
 		return true;
 	}
@@ -172,8 +167,7 @@ stateFunction(adjustRedBrightness) {
 	uint16_t val ;
 
 	entryState {
-		redLed.pwm = 255 ;
-		digitalWrite( redLedPin, HIGH ) ;
+		SoftPWMSet( redLedPin, 255 ) ;
 		teachInT = 250 ; // 2,5 second for on time led
 
 		timeOutT = 250 ; // 25 seconds timeout should suffice
@@ -186,11 +180,11 @@ stateFunction(adjustRedBrightness) {
 				val = map( val, 0, 1023, 0, 255 ) ;
 				redLed.pwm = val ;
 			}
+			SoftPWMSet( redLedPin, redLed.pwm ) ;
 		}
 	}
 	exitState {
-		redLed.pwm = 0 ;
-		digitalWrite( redLedPin, LOW ) ;
+		SoftPWMSet( redLedPin, 0 ) ;
 		EEPROM.write( PWM_RED_ADDR, redLed.pwm ) ;
 		return true;
 	}
@@ -203,6 +197,7 @@ stateFunction(setServoRed) {
 		timeOutT = 250; // 25 seconds timeout should suffice
 		semaphore.attach( servoPin );
 		digitalWrite( redLedPin, HIGH ) ;
+		semaphore.write(90);
 	}
 	onState {
 		if( !teachInT ) { teachInT = 10; // 10 updates per second should suffice

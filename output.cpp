@@ -3,17 +3,27 @@
 #include "src/basics/io.h"
 #include "src/basics/timers.h"
 #include "src/modules/debounceClass.h"
+#include "src/modules/SoftPWM.h"
 
 
 /***************** HANDLE OUTPUTS **********************/
-#define clrLeds() digitalWrite(greenLed,LOW);digitalWrite(yellowLed,LOW);digitalWrite(redLed,LOW);
-#define setLeds(x,y,z)  if(x)digitalWrite(greenLed,x);if(y)digitalWrite(yellowLed,y);if(z)digitalWrite(redLed,z);
+//#define clrLeds() digitalWrite(greenLed,LOW);digitalWrite(yellowLed,LOW);digitalWrite(redLed,LOW);
+//#define setLeds(x,y,z)  if(x)digitalWrite(greenLed,x);if(y)digitalWrite(yellowLed,y);if(z)digitalWrite(redLed,z);
 
 const int pwmMin = 0;
 const int pwmMax = 255;
 uint8_t pwm = 0;
        
+void outputInit()
+{
+    // SoftPWMSet(greenLedPin, 10);
+    // SoftPWMSet(yellowLedPin, 50);
+    // SoftPWMSet(redLedPin, 100);
+	SoftPWMSetFadeTime(greenLedPin, 20000, 30000);
+    SoftPWMSetFadeTime(yellowLedPin, 20000, 30000);
+    SoftPWMSetFadeTime(redLedPin, 20000, 30000);
 
+}
 
 // 20Hz  -> 50ms
 // 100Hz -> 10ms
@@ -65,13 +75,13 @@ void controlBrakeModule( ) {    // it may be that for analog trains something sp
 
 
 void fadeLeds() {
-    if(   greenLed.state == 1 ) /*&& (  greenLed.pwm <  greenLed.max )* / ) {  greenLed.pwm ++ ;*/digitalWrite( greenLedPin, HIGH ) ;// }
-    if(  yellowLed.state == 1 ) /*&& ( yellowLed.pwm < yellowLed.max )* / ) { yellowLed.pwm ++ ;*/digitalWrite( yellowLedPin, HIGH ) ;// }
-    if(     redLed.state == 1 ) /*&& (    redLed.pwm <    redLed.max )* / ) {    redLed.pwm ++ ;*/digitalWrite( redLedPin, HIGH ) ;// }
+    if(   greenLed.state == 1 ) SoftPWMSet(greenLedPin, greenLed.pwm);/*&& (  greenLed.pwm <  greenLed.pwm )* / ) {  greenLed.pwm ++ ;* /digitalWrite( greenLedPin, HIGH ) ;// }*/
+    if(  yellowLed.state == 1 ) SoftPWMSet(yellowLedPin, yellowLed.pwm);/*&& ( yellowLed.pwm < yellowLed.pwm )* / ) { yellowLed.pwm ++ ;* /digitalWrite( yellowLedPin, HIGH ) ;// }*/
+    if(     redLed.state == 1 ) SoftPWMSet(redLedPin, redLed.pwm);/*&& (    redLed.pwm <    redLed.pwm )* / ) {    redLed.pwm ++ ;* /digitalWrite( redLedPin, HIGH ) ;// }*/
 
-    if(   greenLed.state == 0 ) /*&& (  greenLed.pwm >  greenLed.min )* / ) {  greenLed.pwm -- ;*/digitalWrite( greenLedPin, LOW ) ;// }
-    if(  yellowLed.state == 0 ) /*&& ( yellowLed.pwm > yellowLed.min )* / ) { yellowLed.pwm -- ;*/digitalWrite( yellowLedPin, LOW ) ;// }
-    if(     redLed.state == 0 ) /*&& (    redLed.pwm >    redLed.min )* / ) {    redLed.pwm -- ;*/digitalWrite( redLedPin, LOW ) ;// }
+    if(   greenLed.state == 0 ) SoftPWMSet(greenLedPin, 0);/*&& (  greenLed.pwm >  greenLed.min )* / ) {  greenLed.pwm -- ;* /digitalWrite( greenLedPin, LOW ) ;// }*/
+    if(  yellowLed.state == 0 ) SoftPWMSet(yellowLedPin, 0);/*&& ( yellowLed.pwm > yellowLed.min )* / ) { yellowLed.pwm -- ;* /digitalWrite( yellowLedPin, LOW ) ;// }*/
+    if(     redLed.state == 0 ) SoftPWMSet(redLedPin, 0);/*&& (    redLed.pwm >    redLed.min )* / ) {    redLed.pwm -- ;* /digitalWrite( redLedPin, LOW ) ;// }*/
 
     //Serial.print(greenLed.pwm);Serial.print(" "); Serial.print(yellowLed.pwm);Serial.print(" ");Serial.println(redLed.pwm);
 }

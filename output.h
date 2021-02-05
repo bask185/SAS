@@ -5,3 +5,4 @@ extern void servoControl() ;
 extern void sendSignals() ;
 extern void controlBrakeModule() ;
 extern void initTimer0() ;
+extern void outputInit();
