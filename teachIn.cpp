@@ -92,6 +92,7 @@ static void nextState(unsigned char _state, unsigned char _interval) {
 		teachInT = _interval; } 
 	state = _state; }
 
+
 // STATE FUNCTIONS
 
 stateFunction( waitButtonPress ) { // just wait on the first button press

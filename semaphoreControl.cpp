@@ -13,7 +13,7 @@
 #define onState runOnce = false; if(!runOnce)
 #define exitState if(!exitFlag) return false; else
 #define State(x) break; case x: if(runOnce) Serial.println(#x); if(x##F())
-#define STATE_MACHINE_BEGIN semaphore.write( servoPos ) ;if(!enabled) { \
+#define STATE_MACHINE_BEGIN if(!enabled) { \
 	if(!semaphoreControlT) enabled = true; } \
 else switch(state){\
 	default: Serial.println("unknown state executed, state is idle now"); state = semaphoreControlIDLE; case semaphoreControlIDLE: return true;
@@ -28,10 +28,14 @@ else switch(state){\
 // VARIABLES
 static unsigned char state = beginState ;
 static bool enabled = true, runOnce = true, exitFlag = false;
-
+uint8_t massInertiaSteps ;
 
 // FUNCTIONS
-extern void semaphoreControlInit(void) { state = beginState;servoPosMin=45;servoPosMax=135; }
+extern void semaphoreControlInit(void) 
+{ 
+	state = beginState;
+	massInertiaSteps = abs( servoPosMin - servoPosMax ) / 5 ; // after movement bouncing is calculated by taking difference between min and max divided by 5
+}
 extern byte semaphoreControlGetState(void) { return state;}
 extern void semaphoreControlSetState(unsigned char _state) { state = _state; runOnce = true; }
 static void nextState(unsigned char _state, unsigned char _interval) {
@@ -43,31 +47,45 @@ static void nextState(unsigned char _state, unsigned char _interval) {
 	state = _state; }
 
 
-const int massInertiaSteps = 30 ;
+	
+uint8_t followServo( setpoint ) 
+{
+	if( setpoint < servoPos ) servoPos -- ;
+	if( setpoint > servoPos ) servoPos ++ ;
+	
+	if( setpoint == servoPos )	return 1 ;
+	else						return 0 ;
+}
+
 
 // STATE FUNCTIONS
 stateFunction(up) {
-	entryState {
+	entryState
+	{
 		semaphore.detach( );
 	}
-	onState {
+	onState
+	{
 		if( signal.state == yellow || signal.state == red ) exitFlag = true; 
 	}
-	exitState {
+	exitState
+	{
 		semaphore.attach( servoPin );
 		return true;
 	}
 }
 
 stateFunction(lowering) {
-	entryState {
+	entryState
+	{
 		
 	}
-	onState {
-		if( servoPos > servoPosMin ) servoPos -- ;
-		else exitFlag = true;
+	onState
+	{
+		if( followServo( servoPosMin ) ) exitFlag = true;
 	}
-	exitState {
+	exitState
+	{
 
 		return true;
 	}
@@ -76,45 +94,54 @@ stateFunction(lowering) {
 stateFunction(bounceAfterLowering) {
 	static uint8_t steps ;
 	
-	entryState {
+	entryState
+	{
 		steps = 0 ;
+		if( servoPosMin > servoPosMax ) diff = -1 ; // reverse direction
+		else							diff =  1 ; // normal direction
 	}
-	onState {
+	onState
+	{
 				
-		if( steps < (massInertiaSteps / 2) )	servoPos -- ;
-		else									servoPos ++ ;
+		if( steps < (massInertiaSteps / 2) )	servoPos -= diff ;
+		else									servoPos += diff ;
 		
-		steps ++ ;
-		if( steps >= massInertiaSteps )	exitFlag = true; 
+		if( ++steps >= massInertiaSteps )	exitFlag = true; 
 	}
-	exitState {
+	exitState
+	{
 
 		return true;
 	}
 }
 
 stateFunction(down) {
-	entryState {
+	entryState
+	{
 		semaphore.detach( );
 	}
-	onState {
+	onState
+	{
 		if( signal.state == green )  exitFlag = true;
 	}
-	exitState {
+	exitState
+	{
 		semaphore.attach( servoPin );
 		return true;
 	}
 }
 
 stateFunction(raising) {
-	entryState {
+	entryState
+	{
 		
 	}
-	onState {
-		if( servoPos <  servoPosMax )	servoPos  ++ ;
-		else exitFlag = true;
+	onState
+	{
+		if( followServo( servoPosMin ) ) exitFlag = true;
 	}
-	exitState {
+	exitState
+	{
 
 		return true;
 	}
@@ -122,18 +149,23 @@ stateFunction(raising) {
 
 stateFunction(bounceAfterRaising) {
 	static uint8_t steps ;
+	int8_t diff ;
 	
-	entryState {
+	entryState
+	{
 		steps = 0 ;
+		if( servoPosMin > servoPosMax ) diff = -1 ; // reverse direction
+		else							diff =  1 ; // normal direction
 	}
-	onState {
-		if( steps < massInertiaSteps / 2 )	servoPos ++ ;
-		else								servoPos -- ;
+	onState
+	{
+		if( steps < massInertiaSteps / 2 )	servoPos += diff ;
+		else								servoPos -= diff ;
 
-		steps ++ ;
-		if( steps >= massInertiaSteps )	exitFlag = true;
+		if( ++steps >= massInertiaSteps )	exitFlag = true;
 	}
-	exitState {
+	exitState
+	{
 
 		return true;
 	}
