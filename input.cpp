@@ -33,8 +33,15 @@ uint8_t processButtons( ) {
 	return undefined ;
 }
 
-void readDetector( ) {
-	if( detectorState == FALLING )
+void readDetector( ) 
+{
+	if( signal.locked == 1 ) 		// if signal is locked, do not put state on occupied.
+	{
+		signal.section = available ;
+	}
+		
+	else 
+	if( detectorState == LOW )
 	{
 		signal.section = occupied ;
 		fallT = 0 ;
@@ -56,6 +63,8 @@ uint8_t fallTimeControl( ) {
 
 	if( fallT == 1 ) { // in the last second of fall time  // change signal state
 		fallT = 0 ;
+		
+		signal.section = available ;
 
 		if( signal.type == combiSignal) {		// combi signal goes first to yellow before going to green
 			if( signal.state == red ) {

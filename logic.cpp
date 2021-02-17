@@ -5,6 +5,14 @@
 #include "src/modules/debounceClass.h"
 #include "input.h"
 
+/* Inputs in order of significance
+* direction Line
+* button override
+* occupied state
+* adjacent signals
+*/
+
+
 
 void computeLogic( ) {
 	static uint8_t previousButtonState = 255;
@@ -174,88 +182,106 @@ uint8_t checkNextSignal( ) {
 	}
 }
 	
-// 	if( nextSignal.transitionedToYellow  )
-// 	{
-// 		nextSignal.transitionedToYellow = 0 ; // clear flag for re-use
-// 		return green ;
-// 	}
-// 	if( nextSignal.transitionedToRed )
-// 	{
-// 		nextSignal.transitionedToRed = 0 ;		// clear flag for re-use
-// 		if( signal.type == mainSignal  ) return green ; //Serial.println("prev signal became red, I as main signal became green"); }
-// 		if( signal.type == combiSignal ) return yellow; //Serial.println("prev signal became red, I as combi signal became yellow"); }
-// 	}
-// 	if( nextSignal.transitionedToRed )
-// 	{
-// }
 
-
-// void computeLogic( ) {
-
-// 	if( signal.locked ) return ;	// if signal is locked, don't do anything
-
-// 	// HANDLE BUTTONS
-// 	uint8_t newButtonState = processButtons();
-// 	if( newButtonState )
-// 	{
-// 		if( newButtonState == green ) 
-// 		{ 
-// 			signal.override = 0 ;
-// 			if( signal.section == occupied )
-// 			{
-// 				signal.state = driveOnSight ;
-// 			}
-// 			else
-// 			{
-// 				signal.state = green ;
-// 			}
-// 			return ;
-// 		}
-// 		else // yellow or red
-// 		{ 
-// 			signal.override = 1 ; 
-// 			signal.state = newButtonState ; // yellow or red
-			
-// 			return ;
-// 		}
-// 	}
-// 	// NO BUTTONS ARE PRESSED
-
-// 	return ; 
-
-// 	// IF SIGNAL IS OVERRIDDEN BY BUTTONS, return
-// 	if( signal.override ) return ;
-// 	else
-// 	{
-// 		return ; 
-// 	}
-	 
+void computeLogic()
+{
+	uint8_t newState ;
 	
-// 	// IS TRACK OCCUPIED?
-// 	if( detectorState == FALLING ) {	// TRAIN DETECTED
-// 		signal.state = red ;			// STATE IS RED
-// 		return ;
-// 	}
-
-// 	// Not connected to adjacent signal, means that we will be using time to handle the signal's state
-// 	if( signal.connected == false )
-// 	{
-// 		uint8_t newState = fallTimeControl() ; // signal handled on time base
-// 		if( newState )
-// 		{
-// 			signal.state = newState ;
-// 		}
-// 		return ;
-// 	}
-
-// 	// CONNECTED TO ADJACENT SIGNAL
-// 	uint8_t newState = checkNextSignal( ) ;
-// 	if( newState )
-// 	{
-// 		signal.state = newState ;
-// 	}
-// }
+//********************** DIRECTION LINE **********************/
+	if( directionSignal == LOW )
+	{							// signal is driven from behind, discard all other input
+		signal.state = red ;
+		return ;
+	}
+	else
+	if( directionSignal == RISING )
+	{
+		if( detectorState == LOW )
 	
-	
+//********************** BUTTONS **********************/
+	newState = readInputs() ;
+	if( newState )
+	{
+		if(  signal.section == occupied 
+		&& ( newState == green || newState = yellow) )
+		{
+			signal.state = driveOnSight ;				// special feature when green is pressed 
+		}
+		else 
+		{
+			signal.state = newState
+		}
 		
+		if( signal.override == true ) return ; 			// if buttons have overridden signal, discard all other input 
+	}
+	
+/********************** DETECTOR **********************/
+	if( signal.section == occupied )
+	{
+		signal.state = red ;
+	}
+	
+	if( detectorState == LOW ) return;					// if the train is still seen, the following input can be disregarded.
+	
+/********************** ADJACENT SIGNALS **********************/
+	if( signal.connected == 1 )
+	{
+		newState = checkNextSignal
+		if( nextSignal.transitionedToRed )
+		{
+			signal.section = available ;  nextSignal.transitionedToRed = 0 ;
+		}
+		temp = red;
+}
+/********************** FALL TIME CONTROL **********************/
+	else
+	{		
+		uint8_t newFallTimeState = fallTimeControl() ;				// handles the time based signal states
 
+		if( newFallTimeState != undefined )
+		{
+			signal.state = newFallTimeState ;
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*/
