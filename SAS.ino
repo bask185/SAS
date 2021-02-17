@@ -1,5 +1,6 @@
 #include "src/basics/timers.h"
 #include "src/basics/io.h"
+#include "src/modules/SoftPWM.h"
 #include "teachIn.h"
 #include "input.h"
 #include "output.h"
@@ -63,11 +64,16 @@ void setup() {
     initIO() ;
     initTimers() ;
     // initTimer0() ;
+
+    
+	SoftPWMBegin();
+    outputInit();
+
     sei() ;
 
-    redLed.max = 255 ;
-    yellowLed.max  = 255 ;
-    greenLed.max  = 20 ;
+    redLed.pwm = 255 ;
+    yellowLed.pwm  = 255 ;
+    greenLed.pwm  = 20 ;
 
     signal.locked = 0 ;
     signal.section = available ; // INPUT DIPSWITCHES NEEDED HERE
@@ -75,7 +81,7 @@ void setup() {
     signal.state = green ;
     signal.wasLocked = 0 ;
 
-    Serial.begin(115200);
+    //Serial.begin(115200); only needed for debug, interferes with the slow down pin due to same IO as RX
     Serial.println("sup");
     
     teachInInit();
@@ -90,6 +96,7 @@ void loop() {
     debounceInputs() ;
     
     teachIn() ;
+
     if( teachInGetState() != waitButtonPress ) return ;
     
     readIncFreq() ;
@@ -102,8 +109,8 @@ void loop() {
 
     //  output
     sendSignals() ;                             // send the signal to the adjacent module
-    repeat( &fadeT, 1, fadeLeds );              // fade leds in and out to emulate glowblub effects, currently this takes 1/4 of a setting
-    repeat( &servoT, 20, semaphoreControl ) ;       // handle the arm's servo motor including mass inertia movement every, takes 1 step every x time
+    repeat( &fadeT, 10, fadeLeds );             // fade leds in and out to emulate glowblub effects, currently this takes 1/4 of a setting  
+    repeat( &servoT, 10, semaphoreControl ) ;   // handle the arm's servo motor including mass inertia movement every, takes 1 step every x time
     controlBrakeModule() ;                      // handles the braking modules/shutoff relay
 }
 

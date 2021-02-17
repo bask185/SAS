@@ -11,7 +11,6 @@ If there is no change in buttons, function returns 'undefined' which is 0
 uint8_t processButtons( ) {
 
 	if( greenButtonState == FALLING ) {
-		Serial.println("green pressed");
 
 		if( signal.section == occupied 
 		&&  signal.type != mainSignal ) return driveOnSight ; 
@@ -19,14 +18,12 @@ uint8_t processButtons( ) {
 	}
 
 	if( yellowButtonState == FALLING ) {
-		Serial.println(" yellow pressed");
 		if( signal.section == occupied 
 		&&  signal.type != mainSignal ) return driveOnSight ;
 		else							return yellow ;
 	}
 
 	if( redButtonState == FALLING ) {
-		Serial.println(" red pressed");
 		return red ;
 	}
 
