@@ -5,6 +5,33 @@
 #include "src/modules/debounceClass.h"
 #include "input.h"
 
+#define newLogic
+
+#define setStates(x,y,z) greenLed.state = x ; yellowLed.state = y ; redLed.state = z ;
+
+void blink() {
+	static uint8_t mem = 0 ;
+
+	if( mem == 0 ) {
+		mem = 1;
+		setStates(0,1,0);
+	} else {
+		mem = 0;
+		setStates(0,0,0);
+	}
+}
+
+/*** this function ensures the fade led function can do it's job ***/
+void setLedStates( ) {
+	switch( signal.state ) {
+		case green:		setStates(1,0,0); break;
+		case yellow:	setStates(0,1,0); break;
+		case red:		setStates(0,0,1); break;
+		case driveOnSight: repeat( &blinkT, 100, blink ) ; break ;
+	}
+}
+
+
 /* Inputs in order of significance
 * direction Line
 * button override
@@ -13,7 +40,82 @@
 */
 
 
+#ifdef newLogic
 
+void computeLogic()
+{
+	uint8_t newState ;
+	
+//********************** DIRECTION LINE **********************/
+	if( directionSignal == LOW )
+	{								// signal is driven from behind, discard all other input
+		signal.state = red ;
+		return ;
+	}
+	else
+	if( directionSignal == RISING )	// if direction line is released, a check is made is on the current detector state. 
+	{
+		if( detectorState == LOW )
+		{
+			signal.section = occupied ;
+		}
+		else
+		{
+			signal.section = available ;
+		}
+	}
+/**************************************************/
+
+
+//********************** BUTTONS **********************/
+	newState = readInputs() ;
+	if( newState )
+	{
+		signal.state = newState
+	}
+	if( signal.override == true ) return ; 			// if buttons have overridden signal, discard all other input 
+/**************************************************/
+
+
+/********************** DETECTOR **********************/
+	if( signal.section == occupied )
+	{
+		signal.state = red ;
+	}
+	
+	if( detectorState == LOW ) return;					// if the train is still seen, the following input can be disregarded.
+/**************************************************/
+
+
+/********************** ADJACENT SIGNALS **********************/
+	if( signal.connected == 1 )
+	{
+		newState = checkNextSignal() ;
+		
+		if( nextSignal.transitionedToRed )
+		{
+			nextSignal.transitionedToRed = 0 ;
+			signal.section = available ;  
+		}
+	}
+/**************************************************/
+
+
+/********************** FALL TIME CONTROL **********************/
+	else
+	{		
+		uint8_t newFallTimeState = fallTimeControl() ;				// handles the time based signal states
+
+		if( newFallTimeState != undefined )
+		{
+			signal.state = newFallTimeState ;
+		}
+	}
+}
+	
+	
+	
+#else
 void computeLogic( ) {
 	static uint8_t previousButtonState = 255;
 
@@ -112,176 +214,4 @@ void computeLogic( ) {
 	}
 }
 
-
-#define setStates(x,y,z) greenLed.state = x ; yellowLed.state = y ; redLed.state = z ;
-
-void blink() {
-	static uint8_t mem = 0 ;
-
-	if( mem == 0 ) {
-		mem = 1;
-		setStates(0,1,0);
-	} else {
-		mem = 0;
-		setStates(0,0,0);
-	}
-}
-
-/*** this function ensures the fade led function can do it's job ***/
-void setLedStates( ) {
-	switch( signal.state ) {
-		case green:		setStates(1,0,0); break;
-		case yellow:	setStates(0,1,0); break;
-		case red:		setStates(0,0,1); break;
-		case driveOnSight: repeat( &blinkT, 100, blink ) ; break ;
-	}
-}
-/*******************************
-This function checks changes of adjacent signal, and act accordingly
-***********************************/
-uint8_t checkNextSignal( ) {
-	
-	switch( signal.type ) {
-		case mainSignal:
-		if( nextSignal.transitionedToRed ) {
-			nextSignal.transitionedToRed = 0 ;
-			return green ;
-		}
-		if( nextSignal.transitionedToYellow ) {
-			nextSignal.transitionedToYellow = 0 ;
-			return green ;
-		}
-		break ;
-		
-		case combiSignal:
-		if( nextSignal.transitionedToRed ) {
-			nextSignal.transitionedToRed = 0 ;
-			return yellow ;
-		}
-		if( nextSignal.transitionedToYellow ) {
-			nextSignal.transitionedToYellow = 0 ;
-			return green ;
-		}
-		if( nextSignal.transitionedToGreen) { // SHOULD NEVER OCCUR
-			nextSignal.transitionedToGreen = 0 ;
-			return green ;
-		}
-		break ;
-		
-		
-		case dutchPreSignal:
-		if( nextSignal.transitionedToRed ) {
-			nextSignal.transitionedToRed = 0 ;
-			return yellow ;
-		}
-		if( nextSignal.transitionedToGreen) {
-			nextSignal.transitionedToGreen = 0 ;
-			return red ;
-		}
-		break;
-	}
-}
-	
-
-void computeLogic()
-{
-	uint8_t newState ;
-	
-//********************** DIRECTION LINE **********************/
-	if( directionSignal == LOW )
-	{							// signal is driven from behind, discard all other input
-		signal.state = red ;
-		return ;
-	}
-	else
-	if( directionSignal == RISING )
-	{
-		if( detectorState == LOW )
-	
-//********************** BUTTONS **********************/
-	newState = readInputs() ;
-	if( newState )
-	{
-		if(  signal.section == occupied 
-		&& ( newState == green || newState = yellow) )
-		{
-			signal.state = driveOnSight ;				// special feature when green is pressed 
-		}
-		else 
-		{
-			signal.state = newState
-		}
-		
-		if( signal.override == true ) return ; 			// if buttons have overridden signal, discard all other input 
-	}
-	
-/********************** DETECTOR **********************/
-	if( signal.section == occupied )
-	{
-		signal.state = red ;
-	}
-	
-	if( detectorState == LOW ) return;					// if the train is still seen, the following input can be disregarded.
-	
-/********************** ADJACENT SIGNALS **********************/
-	if( signal.connected == 1 )
-	{
-		newState = checkNextSignal
-		if( nextSignal.transitionedToRed )
-		{
-			signal.section = available ;  nextSignal.transitionedToRed = 0 ;
-		}
-		temp = red;
-}
-/********************** FALL TIME CONTROL **********************/
-	else
-	{		
-		uint8_t newFallTimeState = fallTimeControl() ;				// handles the time based signal states
-
-		if( newFallTimeState != undefined )
-		{
-			signal.state = newFallTimeState ;
-		}
-	}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-*/
+#endif

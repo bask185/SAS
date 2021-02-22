@@ -10,24 +10,24 @@ If there is no change in buttons, function returns 'undefined' which is 0
 ****************************/
 uint8_t processButtons( ) {
 
-	if( greenButtonState == FALLING ) {
-
-		if( signal.section == occupied 
-		&&  signal.type != mainSignal ) return driveOnSight ; 
-		else							return green ; 
+	if( signal.section == occupied 
+	&&( greenButtonState == FALLING || yellowButtonState == FALLING )) 
+	{
+		signal.section = available ; 
+		buttonOveride = 1 ;
+		return driveOnSight ; 
 	}
 
-	if( yellowButtonState == FALLING ) {
-		if( signal.section == occupied 
-		&&  signal.type != mainSignal ) return driveOnSight ;
-		else							return yellow ;
-	}
-
-	if( redButtonState == FALLING ) {
-		return red ;
-	}
-
-	return undefined ;
+	uint8_t retVal ;
+	
+	if(		 greenButtonState  == FALLING )	retVal = green ;
+	else if( yellowButtonState == FALLING )	retVal = yellow ;
+	else if( redButtonState    == FALLING )	retVal = red ;
+	else 									retVal = undefined ; 
+	
+	if( retVal ) buttonOveride = 0 ;
+	
+	return retVal ;
 }
 
 void readDetector( ) 
@@ -83,6 +83,10 @@ uint8_t fallTimeControl( ) {
 
 // FUNCTION CONFIRMED TO WORK 17/01/21
 void debounceInputs() {
+	#ifndef V1_1
+	static uint16_t sample = 0 ;
+	#endif
+	
 	if( !receiverT ) {	// ever ms
 		receiverT = 1;
 		
@@ -95,9 +99,18 @@ void debounceInputs() {
 		// debounce inputs
 		directionSignal.debounce() ;
 		detector.debounce() ;
+		
+		#ifndef V1_1
 		redButton.debounce() ;
 		greenButton.debounce() ;
 		yellowButton.debounce() ;
+		#else
+		sample = analogRead( buttonPin ) ;
+		if( sample >    redSample - 100 && sample <    redSample + 100 ) redButtonState    = FALLING ;
+		if( sample > yellowSample - 100 && sample < yellowSample + 100 ) yellowButtonState = FALLING ;
+		if( sample >  greenSample - 100 && sample <  greenSample + 100 ) greenButtonState  = FALLING ;
+		
+		#endif
 
 		// stuff states in these variables for the remainder of the program's cycle		
 
@@ -106,9 +119,58 @@ void debounceInputs() {
 		// if(redButtonState == FALLING ) PORTB ^= (1<<5);
 	}
 	detectorState = detector.getState() ;
+	
+	#ifndef V1_1
 	yellowButtonState = yellowButton.getState() ;
 	redButtonState = redButton.getState() ;
-	greenButtonState = greenButton.getState() ;		
+	greenButtonState = greenButton.getState() ;	
+	#endif
+}
+
+/*******************************
+This function checks changes of adjacent signal, and act accordingly
+***********************************/
+uint8_t checkNextSignal( ) {
+	
+	switch( signal.type ) {
+		case mainSignal:
+		if( nextSignal.transitionedToRed ) {
+			nextSignal.transitionedToRed = 0 ;
+			return green ;
+		}
+		if( nextSignal.transitionedToYellow ) {
+			nextSignal.transitionedToYellow = 0 ;
+			return green ;
+		}
+		break ;
+		
+		case combiSignal:
+		if( nextSignal.transitionedToRed ) {
+			nextSignal.transitionedToRed = 0 ;
+			return yellow ;
+		}
+		if( nextSignal.transitionedToYellow ) {
+			nextSignal.transitionedToYellow = 0 ;
+			return green ;
+		}
+		if( nextSignal.transitionedToGreen) { // SHOULD NEVER OCCUR
+			nextSignal.transitionedToGreen = 0 ;
+			return green ;
+		}
+		break ;
+		
+		
+		case dutchPreSignal:
+		if( nextSignal.transitionedToRed ) {
+			nextSignal.transitionedToRed = 0 ;
+			return yellow ;
+		}
+		if( nextSignal.transitionedToGreen) {
+			nextSignal.transitionedToGreen = 0 ;
+			return red ;
+		}
+		break;
+	}
 }
 
 void readIncFreq() { // ISR

@@ -7,3 +7,4 @@ extern void readIncFreq( ) ;
 extern void readDirection( ) ;
 extern void readDetector( ) ;
 extern uint8_t processSignals( ) ;
+extern uint8_t checkNextSignal( ) ;

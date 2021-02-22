@@ -95,31 +95,6 @@ stateFunction(lowering) {
 	}
 }
 
-stateFunction(bounceAfterLowering) {
-	static uint8_t steps ;
-	static int8_t diff = 0 ;
-	
-	entryState
-	{
-		steps = 0 ;
-		if( servoPosMin > servoPosMax ) diff = -1 ; // reverse direction
-		else							diff =  1 ; // normal direction
-	}
-	onState
-	{
-				
-		if( steps < (massInertiaSteps / 2) )	servoPos -= diff ;
-		else									servoPos += diff ;
-		
-		if( ++steps >= massInertiaSteps )	exitFlag = true; 
-	}
-	exitState
-	{
-
-		return true;
-	}
-}
-
 stateFunction(down) {
 	entryState
 	{
@@ -152,30 +127,6 @@ stateFunction(raising) {
 	}
 }
 
-stateFunction(bounceAfterRaising) {
-	static uint8_t steps ;
-	static int8_t diff ;
-	
-	entryState
-	{
-		steps = 0 ;
-		if( servoPosMin > servoPosMax ) diff = -1 ; // reverse direction
-		else							diff =  1 ; // normal direction
-	}
-	onState
-	{
-		if( steps < massInertiaSteps / 2 )	servoPos += diff ;
-		else								servoPos -= diff ;
-
-		if( ++steps >= massInertiaSteps )	exitFlag = true;
-	}
-	exitState
-	{
-
-		return true;
-	}
-}
-
 // STATE MACHINE
 extern bool semaphoreControl(void) {
 	semaphore.write( servoPos ) ;
@@ -186,18 +137,12 @@ extern bool semaphoreControl(void) {
 		nextState(lowering, 0); }
 
 	State(lowering) {
-		nextState(bounceAfterLowering, 0); }
-
-	State(bounceAfterLowering) {
 		nextState(down, 0); }
 
 	State(down) {
 		nextState(raising, 0); }
 
 	State(raising) {
-		nextState(bounceAfterRaising, 0); }
-
-	State(bounceAfterRaising) {
 		nextState(up, 0); }
 
 	STATE_MACHINE_END
